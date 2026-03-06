@@ -32,6 +32,7 @@ export default async function DocumentsPage() {
               <th className="px-4 py-2">Title</th>
               <th className="px-4 py-2">Size</th>
               <th className="px-4 py-2">Created</th>
+              <th className="px-4 py-2">Share</th>
             </tr>
           </thead>
           <tbody>
@@ -40,11 +41,16 @@ export default async function DocumentsPage() {
                 <td className="px-4 py-2">{document.title}</td>
                 <td className="px-4 py-2">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
                 <td className="px-4 py-2">{new Date(document.created_at).toLocaleString()}</td>
+                <td className="px-4 py-2">
+                  <Link className="underline" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>
+                    Create link
+                  </Link>
+                </td>
               </tr>
             ))}
             {!documents?.length ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-500" colSpan={4}>
                   No documents yet.
                 </td>
               </tr>

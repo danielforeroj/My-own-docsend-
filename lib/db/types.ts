@@ -1,17 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type FieldType =
-  | "first_name"
-  | "last_name"
-  | "email"
-  | "phone"
-  | "telegram"
-  | "company"
-  | "title"
-  | "country"
-  | "free_text"
-  | "dropdown"
-  | "checkbox_consent";
+export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "checkbox";
 
 export type AppRole = "super_admin" | "admin";
 
@@ -150,7 +139,11 @@ export type Database = {
       share_links: {
         Row: {
           id: string;
-          space_id: string;
+          organization_id: string;
+          link_type: "space" | "document";
+          space_id: string | null;
+          document_id: string | null;
+          name: string | null;
           token: string;
           requires_intake: boolean;
           expires_at: string | null;
@@ -159,7 +152,11 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          space_id: string;
+          organization_id: string;
+          link_type: "space" | "document";
+          space_id?: string | null;
+          document_id?: string | null;
+          name?: string | null;
           token: string;
           requires_intake?: boolean;
           expires_at?: string | null;
@@ -167,42 +164,51 @@ export type Database = {
           created_at?: string;
         };
         Update: {
+          name?: string | null;
           requires_intake?: boolean;
           expires_at?: string | null;
         };
       };
-      intake_field_configs: {
+      share_link_fields: {
         Row: {
           id: string;
-          space_id: string;
-          field_key: FieldType;
+          share_link_id: string;
+          field_type: FieldType;
+          field_name: string;
           label: string;
           is_required: boolean;
           options: Json | null;
+          placeholder: string | null;
           position: number;
           created_at: string;
         };
         Insert: {
           id?: string;
-          space_id: string;
-          field_key: FieldType;
+          share_link_id: string;
+          field_type: FieldType;
+          field_name: string;
           label: string;
           is_required?: boolean;
           options?: Json | null;
+          placeholder?: string | null;
           position?: number;
           created_at?: string;
         };
         Update: {
+          field_type?: FieldType;
+          field_name?: string;
           label?: string;
           is_required?: boolean;
           options?: Json | null;
+          placeholder?: string | null;
           position?: number;
         };
       };
       visitor_submissions: {
         Row: {
           id: string;
-          space_id: string;
+          space_id: string | null;
+          document_id: string | null;
           share_link_id: string | null;
           payload: Json;
           ip_hash: string | null;
@@ -211,7 +217,8 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          space_id: string;
+          space_id?: string | null;
+          document_id?: string | null;
           share_link_id?: string | null;
           payload: Json;
           ip_hash?: string | null;
@@ -258,6 +265,25 @@ export type Database = {
           space_id?: string | null;
           visitor_submission_id?: string | null;
           downloaded_at?: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      share_link_access_grants: {
+        Row: {
+          id: string;
+          share_link_id: string;
+          visitor_submission_id: string;
+          token: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          share_link_id: string;
+          visitor_submission_id: string;
+          token: string;
+          expires_at: string;
           created_at?: string;
         };
         Update: never;

@@ -8,6 +8,7 @@ const links = [
   { href: "/admin/documents", label: "Documents" },
   { href: "/admin/spaces", label: "Spaces" },
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/share-links", label: "Share Links" },
   { href: "/admin/settings", label: "Settings" }
 ];
 

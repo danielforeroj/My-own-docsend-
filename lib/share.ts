@@ -1,0 +1,80 @@
+import { cookies } from "next/headers";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { FieldType } from "@/lib/db/types";
+
+export type ShareField = {
+  id: string;
+  field_name: string;
+  label: string;
+  field_type: FieldType;
+  is_required: boolean;
+  options: string[] | null;
+  placeholder: string | null;
+  position: number;
+};
+
+export async function getShareLinkByToken(token: string) {
+  const supabase = createAdminClient();
+  const { data: link } = await supabase
+    .from("share_links")
+    .select("id, link_type, token, requires_intake, space_id, document_id, organization_id, expires_at, name")
+    .eq("token", token)
+    .maybeSingle();
+
+  return link;
+}
+
+export function grantCookieName(shareLinkId: string) {
+  return `sl_access_${shareLinkId}`;
+}
+
+export async function hasValidAccessGrant(shareLinkId: string): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(grantCookieName(shareLinkId))?.value;
+  if (!token) return false;
+
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("share_link_access_grants")
+    .select("id, expires_at")
+    .eq("share_link_id", shareLinkId)
+    .eq("token", token)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  return Boolean(data);
+}
+
+export function validateIntakeValue(field: ShareField, value: FormDataEntryValue | null) {
+  const raw = typeof value === "string" ? value.trim() : "";
+
+  if (field.field_type === "checkbox") {
+    const checked = value === "on";
+    if (field.is_required && !checked) {
+      return { error: `${field.label} is required.` };
+    }
+    return { value: checked };
+  }
+
+  if (field.is_required && !raw) {
+    return { error: `${field.label} is required.` };
+  }
+
+  if (!raw) {
+    return { value: "" };
+  }
+
+  if (field.field_type === "email" && !/^\S+@\S+\.\S+$/.test(raw)) {
+    return { error: `${field.label} must be a valid email.` };
+  }
+
+  if (field.field_type === "phone" && !/^[+()\-\s\d]{7,20}$/.test(raw)) {
+    return { error: `${field.label} must be a valid phone.` };
+  }
+
+  if (field.field_type === "select" && field.options?.length && !field.options.includes(raw)) {
+    return { error: `${field.label} has an invalid option.` };
+  }
+
+  return { value: raw };
+}

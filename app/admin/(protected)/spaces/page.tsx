@@ -38,9 +38,12 @@ export default async function SpacesPage() {
                 <td className="px-4 py-2">{space.name}</td>
                 <td className="px-4 py-2 text-slate-600">{space.slug}</td>
                 <td className="px-4 py-2">{space.is_active ? "Active" : "Inactive"}</td>
-                <td className="px-4 py-2">
+                <td className="space-x-3 px-4 py-2">
                   <Link className="text-slate-700 underline" href={`/admin/spaces/${space.id}/edit`}>
                     Edit
+                  </Link>
+                  <Link className="text-slate-700 underline" href={`/admin/share-links/new?targetType=space&targetId=${space.id}`}>
+                    Create link
                   </Link>
                 </td>
               </tr>

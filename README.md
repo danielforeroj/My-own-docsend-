@@ -9,17 +9,24 @@ Lean internal DocSend-style platform foundation built with:
 
 - Protected admin app at `/admin`
 - Role model foundation (`super_admin`, `admin`) via `memberships.role`
-- Core database schema SQL migration
+- Core database schema SQL migrations
 - Admin shell pages:
   - Dashboard
   - Documents
   - Spaces
+  - Share Links
   - Analytics
   - Settings
 - PDF document uploads to Supabase Storage bucket `documents`
 - Document metadata persistence to `documents` table
 - Basic Spaces CRUD + document assignment
-- Supabase browser/server/admin client helpers
+- Public share links for both Documents and Spaces
+- Per-share-link configurable intake fields
+- Public intake form rendering + validation
+- Gated public access until intake completion
+- Document viewer (signed URL iframe)
+- Space viewer (documents list with signed links)
+- Captured form submissions persisted in `visitor_submissions`
 
 ## Local setup
 
@@ -46,7 +53,9 @@ npm run dev
 ## Supabase manual setup
 
 1. Create a Supabase project.
-2. In SQL editor, run `supabase/migrations/0001_init.sql`.
+2. In SQL editor, run migrations in order:
+   - `supabase/migrations/0001_init.sql`
+   - `supabase/migrations/0002_public_share_links.sql`
 3. Create storage bucket:
    - Name: `documents`
    - Public: `false`
@@ -67,15 +76,11 @@ on conflict (id) do update set full_name = excluded.full_name;
 ```
 
 6. Sign in at `/admin/login` using that user.
+7. Upload documents, create spaces, then create share links from Documents/Spaces pages.
 
 ## Notes
 
 - This is intentionally minimal for MVP speed.
-- Public share link viewer + intake submission runtime flow is schema-ready and can be built in the next iteration.
-- Analytics currently reads from tracked tables (`view_sessions`, `downloads`, `visitor_submissions`) and shows basic aggregates.
-
-## Next recommended step
-
-- Build public share link route (`/s/:token`) with intake form renderer from `intake_field_configs`.
-- Track `visitor_submissions`, `view_sessions`, and `downloads` from that public flow.
-- Add robust error toasts and form validation UX in admin.
+- Public share URLs are served at `/s/:token`.
+- Intake field types supported: `text`, `email`, `phone`, `textarea`, `select`, `checkbox`.
+- If intake is required on a share link, visitors must submit form data before access.
