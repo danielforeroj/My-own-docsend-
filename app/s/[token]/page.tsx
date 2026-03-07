@@ -23,15 +23,16 @@ function FieldRenderer({ field }: { field: ShareField & { help_text?: string | n
     name: field.field_name,
     required: field.is_required,
     className: "w-full",
-    placeholder: field.placeholder ?? undefined,
-    defaultValue: field.default_value ?? undefined
+    placeholder: field.placeholder ?? undefined
   };
 
-  if (field.field_type === "textarea") return <textarea {...commonProps} rows={4} />;
+  if (field.field_type === "textarea") {
+    return <textarea {...commonProps} rows={4} />;
+  }
 
   if (field.field_type === "select") {
     return (
-      <select name={field.field_name} required={field.is_required} className="w-full" defaultValue={field.default_value ?? ""}>
+      <select name={field.field_name} required={field.is_required} className="w-full" defaultValue="">
         <option value="" disabled>
           Select option
         </option>
