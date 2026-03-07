@@ -4,6 +4,15 @@ function hasResendConfig() {
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL && process.env.LEAD_NOTIFICATION_EMAIL);
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 export async function sendNewLeadNotificationEmail(input: {
   shareToken: string;
   linkName: string | null;
@@ -17,15 +26,18 @@ export async function sendNewLeadNotificationEmail(input: {
   const resend = new Resend(process.env.RESEND_API_KEY!);
 
   const rows = Object.entries(input.payload)
-    .map(([key, value]) => `<tr><td style="padding:6px 10px;border:1px solid #ddd"><strong>${key}</strong></td><td style="padding:6px 10px;border:1px solid #ddd">${String(value)}</td></tr>`)
+    .map(
+      ([key, value]) =>
+        `<tr><td style="padding:6px 10px;border:1px solid #ddd"><strong>${escapeHtml(key)}</strong></td><td style="padding:6px 10px;border:1px solid #ddd">${escapeHtml(String(value))}</td></tr>`
+    )
     .join("");
 
   const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.5">
       <h2>New lead captured</h2>
-      <p><strong>Share token:</strong> ${input.shareToken}</p>
-      <p><strong>Share name:</strong> ${input.linkName ?? "(unnamed)"}</p>
-      <p><strong>Submitted at:</strong> ${new Date(input.submittedAt).toLocaleString()}</p>
+      <p><strong>Share token:</strong> ${escapeHtml(input.shareToken)}</p>
+      <p><strong>Share name:</strong> ${escapeHtml(input.linkName ?? "(unnamed)")}</p>
+      <p><strong>Submitted at:</strong> ${escapeHtml(new Date(input.submittedAt).toLocaleString())}</p>
       <table style="border-collapse:collapse;min-width:320px">${rows}</table>
     </div>
   `;

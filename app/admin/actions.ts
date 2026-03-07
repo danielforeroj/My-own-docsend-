@@ -5,6 +5,14 @@ import { randomUUID } from "crypto";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 
+type AllowedFieldType = "text" | "email" | "phone" | "textarea" | "select" | "checkbox";
+const ALLOWED_FIELD_TYPES = new Set<AllowedFieldType>(["text", "email", "phone", "textarea", "select", "checkbox"]);
+
+function isAllowedFieldType(value: string): value is AllowedFieldType {
+  return ALLOWED_FIELD_TYPES.has(value as AllowedFieldType);
+}
+
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -15,36 +23,62 @@ function slugify(input: string) {
 }
 
 function parseFieldRows(formData: FormData) {
-  const rows = Array.from({ length: 6 }, (_, i) => i)
-    .map((index) => {
-      const fieldName = String(formData.get(`field_${index}_name`) || "").trim();
-      const label = String(formData.get(`field_${index}_label`) || "").trim();
-      const fieldType = String(formData.get(`field_${index}_type`) || "text").trim();
-      const required = formData.get(`field_${index}_required`) === "on";
-      const optionsRaw = String(formData.get(`field_${index}_options`) || "").trim();
-      const placeholder = String(formData.get(`field_${index}_placeholder`) || "").trim();
+  const rows: Array<{
+    field_name: string;
+    label: string;
+    field_type: AllowedFieldType;
+    is_required: boolean;
+    options: string[] | null;
+    placeholder: string | null;
+    position: number;
+  }> = [];
 
-      if (!fieldName || !label) return null;
+  for (const index of Array.from({ length: 6 }, (_, i) => i)) {
+    const fieldName = String(formData.get(`field_${index}_name`) || "").trim();
+    const label = String(formData.get(`field_${index}_label`) || "").trim();
+    const fieldTypeRaw = String(formData.get(`field_${index}_type`) || "text").trim();
+    const required = formData.get(`field_${index}_required`) === "on";
+    const optionsRaw = String(formData.get(`field_${index}_options`) || "").trim();
+    const placeholder = String(formData.get(`field_${index}_placeholder`) || "").trim();
 
-      const options =
-        fieldType === "select"
-          ? optionsRaw
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean)
-          : null;
+    if (!fieldName && !label) {
+      continue;
+    }
 
-      return {
-        field_name: fieldName,
-        label,
-        field_type: fieldType,
-        is_required: required,
-        options,
-        placeholder: placeholder || null,
-        position: index
-      };
-    })
-    .filter(Boolean);
+    if (!fieldName || !label) {
+      throw new Error(`Field ${index + 1}: both field name and label are required.`);
+    }
+
+    if (!/^[a-zA-Z][a-zA-Z0-9_]{1,48}$/.test(fieldName)) {
+      throw new Error(`Field ${index + 1}: field name must be alphanumeric with underscores.`);
+    }
+
+    if (!isAllowedFieldType(fieldTypeRaw)) {
+      throw new Error(`Field ${index + 1}: invalid field type.`);
+    }
+
+    const options =
+      fieldTypeRaw === "select"
+        ? optionsRaw
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : null;
+
+    if (fieldTypeRaw === "select" && (!options || options.length === 0)) {
+      throw new Error(`Field ${index + 1}: select fields require at least one option.`);
+    }
+
+    rows.push({
+      field_name: fieldName,
+      label,
+      field_type: fieldTypeRaw,
+      is_required: required,
+      options,
+      placeholder: placeholder || null,
+      position: index
+    });
+  }
 
   return rows;
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getShareLinkByToken, getValidAccessGrant } from "@/lib/share";
 
-export async function GET(_: Request, { params }: { params: { token: string; documentId: string } }) {
+export async function GET(request: Request, { params }: { params: { token: string; documentId: string } }) {
   const link = await getShareLinkByToken(params.token);
 
   if (!link) {
@@ -12,19 +12,17 @@ export async function GET(_: Request, { params }: { params: { token: string; doc
   const accessGrant = await getValidAccessGrant(link.id);
 
   if (link.requires_intake && !accessGrant) {
-    return NextResponse.redirect(new URL(`/s/${params.token}`, process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"));
+    return NextResponse.redirect(new URL(`/s/${params.token}`, request.url));
   }
 
   const supabase = createAdminClient();
 
-  const documentQuery = supabase
+  const { data: document } = await supabase
     .from("documents")
     .select("id, storage_path")
     .eq("id", params.documentId)
     .eq("organization_id", link.organization_id)
     .maybeSingle();
-
-  const { data: document } = await documentQuery;
 
   if (!document) {
     return new NextResponse("Document not found", { status: 404 });

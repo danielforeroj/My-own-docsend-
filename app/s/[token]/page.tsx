@@ -61,10 +61,6 @@ export default async function PublicSharePage({ params }: { params: { token: str
   const link = await getShareLinkByToken(params.token);
   if (!link) notFound();
 
-  if (link.expires_at && new Date(link.expires_at).getTime() < Date.now()) {
-    return <main className="mx-auto max-w-2xl p-6">This share link has expired.</main>;
-  }
-
   const [accessGrant, fields] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
 
   if (link.requires_intake && !accessGrant) {
@@ -77,7 +73,6 @@ export default async function PublicSharePage({ params }: { params: { token: str
           <p className="text-sm text-slate-600">Please complete the intake form to access this shared content.</p>
 
           <form action={action} className="space-y-4">
-            <input type="hidden" name="_ua" value="public-browser" />
             {fields.map((field) => (
               <div className="space-y-1" key={field.id}>
                 {field.field_type !== "checkbox" ? (
@@ -106,6 +101,7 @@ export default async function PublicSharePage({ params }: { params: { token: str
       .from("documents")
       .select("id, title, storage_path")
       .eq("id", link.document_id)
+      .eq("organization_id", link.organization_id)
       .maybeSingle();
 
     if (!document) notFound();
@@ -143,7 +139,7 @@ export default async function PublicSharePage({ params }: { params: { token: str
 
   if (link.link_type === "space" && link.space_id) {
     const [{ data: space }, { data: docs }] = await Promise.all([
-      supabase.from("spaces").select("id, name, description").eq("id", link.space_id).maybeSingle(),
+      supabase.from("spaces").select("id, name, description").eq("id", link.space_id).eq("organization_id", link.organization_id).maybeSingle(),
       supabase
         .from("space_documents")
         .select("position, documents (id, title, storage_path)")
@@ -181,7 +177,7 @@ export default async function PublicSharePage({ params }: { params: { token: str
               </div>
             </div>
           ))}
-          {!docRows.filter(Boolean).length ? <p className="text-sm text-slate-500">No documents in this space.</p> : null}
+          {!docRows.some(Boolean) ? <p className="text-sm text-slate-500">No documents in this space.</p> : null}
         </div>
       </main>
     );

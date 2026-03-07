@@ -1,7 +1,7 @@
 "use server";
 
-import { randomUUID } from "crypto";
-import { cookies } from "next/headers";
+import { createHash, randomUUID } from "crypto";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNewLeadNotificationEmail } from "@/lib/resend";
@@ -9,7 +9,7 @@ import { getShareLinkByToken, grantCookieName, validateIntakeValue } from "@/lib
 
 export async function submitIntake(token: string, formData: FormData) {
   const link = await getShareLinkByToken(token);
-  if (!link) throw new Error("Invalid share link.");
+  if (!link) throw new Error("Invalid or expired share link.");
 
   const supabase = createAdminClient();
 
@@ -37,6 +37,10 @@ export async function submitIntake(token: string, formData: FormData) {
     payload[field.field_name] = result.value as string | boolean;
   }
 
+  const headerStore = await headers();
+  const userAgent = headerStore.get("user-agent");
+  const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const ipHash = forwardedFor ? createHash("sha256").update(forwardedFor).digest("hex") : null;
   const submittedAt = new Date().toISOString();
 
   const { data: submission, error: submissionError } = await supabase
@@ -46,7 +50,8 @@ export async function submitIntake(token: string, formData: FormData) {
       space_id: link.space_id,
       document_id: link.document_id,
       payload,
-      user_agent: formData.get("_ua")?.toString() || null,
+      ip_hash: ipHash,
+      user_agent: userAgent,
       created_at: submittedAt
     })
     .select("id")
@@ -80,7 +85,7 @@ export async function submitIntake(token: string, formData: FormData) {
   const cookieStore = await cookies();
   cookieStore.set(grantCookieName(link.id), accessToken, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     expires: new Date(expiresAt)

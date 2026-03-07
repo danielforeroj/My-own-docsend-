@@ -13,13 +13,31 @@ export type ShareField = {
   position: number;
 };
 
+const SHARE_TOKEN_REGEX = /^[a-f0-9]{32}$/i;
+
+export function isValidShareToken(token: string) {
+  return SHARE_TOKEN_REGEX.test(token);
+}
+
+export function isExpired(expiresAt: string | null) {
+  return Boolean(expiresAt && new Date(expiresAt).getTime() < Date.now());
+}
+
 export async function getShareLinkByToken(token: string) {
+  if (!isValidShareToken(token)) {
+    return null;
+  }
+
   const supabase = createAdminClient();
   const { data: link } = await supabase
     .from("share_links")
     .select("id, link_type, token, requires_intake, space_id, document_id, organization_id, expires_at, name")
     .eq("token", token)
     .maybeSingle();
+
+  if (!link || isExpired(link.expires_at)) {
+    return null;
+  }
 
   return link;
 }
@@ -44,7 +62,6 @@ export async function getValidAccessGrant(shareLinkId: string) {
 
   return data;
 }
-
 
 export function validateIntakeValue(field: ShareField, value: FormDataEntryValue | null) {
   const raw = typeof value === "string" ? value.trim() : "";
