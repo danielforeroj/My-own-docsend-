@@ -45,9 +45,6 @@ export async function getValidAccessGrant(shareLinkId: string) {
   return data;
 }
 
-export async function hasValidAccessGrant(shareLinkId: string): Promise<boolean> {
-  return Boolean(await getValidAccessGrant(shareLinkId));
-}
 
 export function validateIntakeValue(field: ShareField, value: FormDataEntryValue | null) {
   const raw = typeof value === "string" ? value.trim() : "";

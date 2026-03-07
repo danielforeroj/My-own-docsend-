@@ -1,70 +1,55 @@
-# Internal DocSend MVP Foundation
+# Internal DocSend MVP
 
-Lean internal DocSend-style platform foundation built with:
+Lean internal DocSend-style platform for agencies/projects using:
 - Next.js App Router + TypeScript + Tailwind
-- Supabase (Auth, Postgres, Storage)
-- Resend (transactional email)
+- Supabase (Auth + Postgres + Storage)
+- Resend (transactional email notifications)
+- Vercel (deployment)
 
-## Implemented in this step
-
-- Protected admin app at `/admin`
-- Role model foundation (`super_admin`, `admin`) via `memberships.role`
-- Core database schema SQL migrations
-- Admin shell pages:
-  - Dashboard
-  - Documents (+ detail analytics)
-  - Spaces (+ detail analytics)
-  - Share Links
-  - Analytics
-  - Settings
-- PDF document uploads to Supabase Storage bucket `documents`
-- Document metadata persistence to `documents` table
-- Basic Spaces CRUD + document assignment
-- Public share links for both Documents and Spaces
-- Per-share-link configurable intake fields
-- Public intake form rendering + validation
-- Gated public access until intake completion
-- Document viewer and Space viewer
-- Analytics tracking stored internally in Postgres:
-  - views (`view_sessions`)
-  - downloads (`downloads`)
-  - form leads (`visitor_submissions`)
-  - unique viewers (based on distinct visitor submission ids)
-- New lead notification email via Resend (optional env-driven)
+---
 
 ## Local setup
 
-1. Install dependencies
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Copy env file
+2. Create local env file:
 
 ```bash
 cp .env.example .env.local
 ```
 
-3. Fill env vars from Supabase project settings (and Resend if using notifications).
-
-4. Run dev server
+3. Fill `.env.local` values.
+4. Start local app:
 
 ```bash
 npm run dev
 ```
 
-## Supabase manual setup
+5. Optional verification:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
+---
+
+## Supabase setup
 
 1. Create a Supabase project.
-2. In SQL editor, run migrations in order:
+2. Run SQL migrations in order:
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_public_share_links.sql`
-3. Create storage bucket:
+3. Create Storage bucket:
    - Name: `documents`
    - Public: `false`
-4. Create your first auth user (email/password) from Supabase Auth.
-5. Seed org + membership (replace placeholders):
+4. Create first admin user in Supabase Auth (email/password).
+5. Seed initial organization + membership:
 
 ```sql
 insert into public.organizations (name, created_by)
@@ -79,23 +64,70 @@ values ('YOUR_USER_ID', 'Founding Admin')
 on conflict (id) do update set full_name = excluded.full_name;
 ```
 
-6. Sign in at `/admin/login` using that user.
-7. Upload documents, create spaces, then create share links from Documents/Spaces pages.
+6. Login at `/admin/login`.
 
-## Resend setup (optional)
+### Current analytics tracking (internal DB only)
 
-If set, each successful intake form submission triggers a lead notification email.
+Analytics is persisted to your own Supabase database (no PostHog/third-party analytics):
+- `view_sessions`: views + recent visits + per-document/per-space counts
+- `downloads`: tracked downloads from `/s/:token/download/:documentId`
+- `visitor_submissions`: captured intake leads
+
+---
+
+## Resend setup
+
+Resend is used for **new lead notification** emails after intake submissions.
 
 Required env vars:
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `LEAD_NOTIFICATION_EMAIL`
 
-If any are missing, notifications are skipped safely.
+Behavior:
+- If all three vars are set, lead notification emails are sent.
+- If any are missing, email sending is skipped safely (no crash).
 
-## Notes
+---
 
-- This is intentionally minimal for MVP speed.
-- Public share URLs are served at `/s/:token`.
-- Intake field types supported: `text`, `email`, `phone`, `textarea`, `select`, `checkbox`.
-- Download tracking uses `/s/:token/download/:documentId` so download events are persisted before redirecting to signed URLs.
+## Deploy to Vercel
+
+1. Push repo to GitHub/GitLab/Bitbucket.
+2. Import project in Vercel.
+3. Set framework to **Next.js** (auto-detected).
+4. Add environment variables in Vercel Project Settings:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_SITE_URL` (use production URL)
+   - `RESEND_API_KEY`
+   - `RESEND_FROM_EMAIL`
+   - `LEAD_NOTIFICATION_EMAIL`
+5. Deploy.
+6. After deploy, set `NEXT_PUBLIC_SITE_URL` to your production domain and redeploy.
+
+---
+
+## Namecheap DNS setup for `docs.multipliedhq.com`
+
+When your Vercel project is ready:
+
+1. In Vercel, add domain: `docs.multipliedhq.com`.
+2. In Namecheap DNS for `multipliedhq.com`, create:
+   - `CNAME` record
+   - Host: `docs`
+   - Value: `cname.vercel-dns.com`
+   - TTL: Automatic
+3. Wait for DNS propagation.
+4. Verify domain status in Vercel becomes valid.
+5. Ensure `NEXT_PUBLIC_SITE_URL=https://docs.multipliedhq.com`.
+
+---
+
+## Remaining non-blocking follow-ups
+
+- Add pagination for large analytics datasets.
+- Improve unique viewer logic with optional anonymized IP/device fingerprinting.
+- Add admin controls for link expiry and revoke access grants.
+- Add richer branding settings persisted in DB (logo, colors, sender name).
+- Add E2E smoke tests for share-link intake + tracked downloads.
