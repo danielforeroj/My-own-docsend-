@@ -28,21 +28,25 @@ export function grantCookieName(shareLinkId: string) {
   return `sl_access_${shareLinkId}`;
 }
 
-export async function hasValidAccessGrant(shareLinkId: string): Promise<boolean> {
+export async function getValidAccessGrant(shareLinkId: string) {
   const cookieStore = await cookies();
   const token = cookieStore.get(grantCookieName(shareLinkId))?.value;
-  if (!token) return false;
+  if (!token) return null;
 
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("share_link_access_grants")
-    .select("id, expires_at")
+    .select("id, expires_at, visitor_submission_id")
     .eq("share_link_id", shareLinkId)
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
-  return Boolean(data);
+  return data;
+}
+
+export async function hasValidAccessGrant(shareLinkId: string): Promise<boolean> {
+  return Boolean(await getValidAccessGrant(shareLinkId));
 }
 
 export function validateIntakeValue(field: ShareField, value: FormDataEntryValue | null) {

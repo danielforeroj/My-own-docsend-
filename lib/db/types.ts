@@ -230,7 +230,7 @@ export type Database = {
       view_sessions: {
         Row: {
           id: string;
-          space_id: string;
+          space_id: string | null;
           document_id: string | null;
           visitor_submission_id: string | null;
           started_at: string;
@@ -239,7 +239,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          space_id: string;
+          space_id?: string | null;
           document_id?: string | null;
           visitor_submission_id?: string | null;
           started_at?: string;

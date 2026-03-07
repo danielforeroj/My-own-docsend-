@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { submitIntake } from "@/app/s/[token]/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getShareLinkByToken, hasValidAccessGrant, ShareField } from "@/lib/share";
+import { getShareLinkByToken, getValidAccessGrant, ShareField } from "@/lib/share";
 
 async function getFields(shareLinkId: string): Promise<ShareField[]> {
   const supabase = createAdminClient();
@@ -65,9 +65,9 @@ export default async function PublicSharePage({ params }: { params: { token: str
     return <main className="mx-auto max-w-2xl p-6">This share link has expired.</main>;
   }
 
-  const [hasAccess, fields] = await Promise.all([hasValidAccessGrant(link.id), getFields(link.id)]);
+  const [accessGrant, fields] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
 
-  if (link.requires_intake && !hasAccess) {
+  if (link.requires_intake && !accessGrant) {
     const action = submitIntake.bind(null, params.token);
 
     return (
@@ -115,6 +115,7 @@ export default async function PublicSharePage({ params }: { params: { token: str
     await supabase.from("view_sessions").insert({
       space_id: null,
       document_id: document.id,
+      visitor_submission_id: accessGrant?.visitor_submission_id ?? null,
       started_at: new Date().toISOString()
     });
 
@@ -126,11 +127,16 @@ export default async function PublicSharePage({ params }: { params: { token: str
         ) : (
           <p className="text-sm text-slate-600">Unable to load document preview.</p>
         )}
-        {signedUrl?.signedUrl ? (
-          <Link className="underline" href={signedUrl.signedUrl} target="_blank">
-            Open document in new tab
+        <div className="flex gap-4">
+          <Link className="underline" href={`/s/${params.token}/download/${document.id}`}>
+            Download tracked file
           </Link>
-        ) : null}
+          {signedUrl?.signedUrl ? (
+            <Link className="underline" href={signedUrl.signedUrl} target="_blank">
+              Open in new tab
+            </Link>
+          ) : null}
+        </div>
       </main>
     );
   }
@@ -154,15 +160,9 @@ export default async function PublicSharePage({ params }: { params: { token: str
     await supabase.from("view_sessions").insert({
       space_id: space.id,
       document_id: null,
+      visitor_submission_id: accessGrant?.visitor_submission_id ?? null,
       started_at: new Date().toISOString()
     });
-
-    const signedDocs = await Promise.all(
-      docRows.filter(Boolean).map(async (doc) => {
-        const { data } = await supabase.storage.from("documents").createSignedUrl(doc!.storage_path, 60 * 60);
-        return { ...doc!, url: data?.signedUrl ?? null };
-      })
-    );
 
     return (
       <main className="mx-auto max-w-4xl space-y-4 p-6">
@@ -171,19 +171,17 @@ export default async function PublicSharePage({ params }: { params: { token: str
 
         <div className="space-y-2 rounded-lg border border-slate-200 p-4">
           <h2 className="font-semibold">Documents</h2>
-          {signedDocs.map((doc) => (
-            <div className="flex items-center justify-between border-b border-slate-200 py-2 last:border-b-0" key={doc.id}>
-              <span>{doc.title}</span>
-              {doc.url ? (
-                <Link className="underline" href={doc.url} target="_blank">
-                  View
+          {docRows.filter(Boolean).map((doc) => (
+            <div className="flex items-center justify-between border-b border-slate-200 py-2 last:border-b-0" key={doc!.id}>
+              <span>{doc!.title}</span>
+              <div className="space-x-3">
+                <Link className="underline" href={`/s/${params.token}/download/${doc!.id}`}>
+                  Download tracked
                 </Link>
-              ) : (
-                <span className="text-xs text-slate-500">Unavailable</span>
-              )}
+              </div>
             </div>
           ))}
-          {!signedDocs.length ? <p className="text-sm text-slate-500">No documents in this space.</p> : null}
+          {!docRows.filter(Boolean).length ? <p className="text-sm text-slate-500">No documents in this space.</p> : null}
         </div>
       </main>
     );

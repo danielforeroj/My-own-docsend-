@@ -35,7 +35,7 @@ export default async function SpacesPage() {
           <tbody>
             {spaces?.map((space) => (
               <tr key={space.id} className="border-t border-slate-200">
-                <td className="px-4 py-2">{space.name}</td>
+                <td className="px-4 py-2"><Link className="underline" href={`/admin/spaces/${space.id}`}>{space.name}</Link></td>
                 <td className="px-4 py-2 text-slate-600">{space.slug}</td>
                 <td className="px-4 py-2">{space.is_active ? "Active" : "Inactive"}</td>
                 <td className="space-x-3 px-4 py-2">

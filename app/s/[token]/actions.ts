@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendNewLeadNotificationEmail } from "@/lib/resend";
 import { getShareLinkByToken, grantCookieName, validateIntakeValue } from "@/lib/share";
 
 export async function submitIntake(token: string, formData: FormData) {
@@ -36,6 +37,8 @@ export async function submitIntake(token: string, formData: FormData) {
     payload[field.field_name] = result.value as string | boolean;
   }
 
+  const submittedAt = new Date().toISOString();
+
   const { data: submission, error: submissionError } = await supabase
     .from("visitor_submissions")
     .insert({
@@ -43,7 +46,8 @@ export async function submitIntake(token: string, formData: FormData) {
       space_id: link.space_id,
       document_id: link.document_id,
       payload,
-      user_agent: formData.get("_ua")?.toString() || null
+      user_agent: formData.get("_ua")?.toString() || null,
+      created_at: submittedAt
     })
     .select("id")
     .single();
@@ -51,6 +55,13 @@ export async function submitIntake(token: string, formData: FormData) {
   if (submissionError || !submission) {
     throw new Error(submissionError?.message || "Failed to submit intake form.");
   }
+
+  await sendNewLeadNotificationEmail({
+    shareToken: token,
+    linkName: link.name,
+    payload,
+    submittedAt
+  });
 
   const accessToken = randomUUID().replace(/-/g, "");
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString();

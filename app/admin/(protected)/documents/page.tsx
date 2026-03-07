@@ -38,7 +38,7 @@ export default async function DocumentsPage() {
           <tbody>
             {documents?.map((document) => (
               <tr key={document.id} className="border-t border-slate-200">
-                <td className="px-4 py-2">{document.title}</td>
+                <td className="px-4 py-2"><Link className="underline" href={`/admin/documents/${document.id}`}>{document.title}</Link></td>
                 <td className="px-4 py-2">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
                 <td className="px-4 py-2">{new Date(document.created_at).toLocaleString()}</td>
                 <td className="px-4 py-2">

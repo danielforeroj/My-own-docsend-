@@ -3,7 +3,7 @@
 Lean internal DocSend-style platform foundation built with:
 - Next.js App Router + TypeScript + Tailwind
 - Supabase (Auth, Postgres, Storage)
-- Resend placeholder for later email flows
+- Resend (transactional email)
 
 ## Implemented in this step
 
@@ -12,8 +12,8 @@ Lean internal DocSend-style platform foundation built with:
 - Core database schema SQL migrations
 - Admin shell pages:
   - Dashboard
-  - Documents
-  - Spaces
+  - Documents (+ detail analytics)
+  - Spaces (+ detail analytics)
   - Share Links
   - Analytics
   - Settings
@@ -24,9 +24,13 @@ Lean internal DocSend-style platform foundation built with:
 - Per-share-link configurable intake fields
 - Public intake form rendering + validation
 - Gated public access until intake completion
-- Document viewer (signed URL iframe)
-- Space viewer (documents list with signed links)
-- Captured form submissions persisted in `visitor_submissions`
+- Document viewer and Space viewer
+- Analytics tracking stored internally in Postgres:
+  - views (`view_sessions`)
+  - downloads (`downloads`)
+  - form leads (`visitor_submissions`)
+  - unique viewers (based on distinct visitor submission ids)
+- New lead notification email via Resend (optional env-driven)
 
 ## Local setup
 
@@ -42,7 +46,7 @@ npm install
 cp .env.example .env.local
 ```
 
-3. Fill env vars from Supabase project settings.
+3. Fill env vars from Supabase project settings (and Resend if using notifications).
 
 4. Run dev server
 
@@ -78,9 +82,20 @@ on conflict (id) do update set full_name = excluded.full_name;
 6. Sign in at `/admin/login` using that user.
 7. Upload documents, create spaces, then create share links from Documents/Spaces pages.
 
+## Resend setup (optional)
+
+If set, each successful intake form submission triggers a lead notification email.
+
+Required env vars:
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `LEAD_NOTIFICATION_EMAIL`
+
+If any are missing, notifications are skipped safely.
+
 ## Notes
 
 - This is intentionally minimal for MVP speed.
 - Public share URLs are served at `/s/:token`.
 - Intake field types supported: `text`, `email`, `phone`, `textarea`, `select`, `checkbox`.
-- If intake is required on a share link, visitors must submit form data before access.
+- Download tracking uses `/s/:token/download/:documentId` so download events are persisted before redirecting to signed URLs.
