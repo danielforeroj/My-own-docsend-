@@ -256,6 +256,7 @@ export type Database = {
           visitor_submission_id: string | null;
           started_at: string;
           ended_at: string | null;
+          viewer_fingerprint: string | null;
           created_at: string;
         };
         Insert: {
@@ -265,10 +266,12 @@ export type Database = {
           visitor_submission_id?: string | null;
           started_at?: string;
           ended_at?: string | null;
+          viewer_fingerprint?: string | null;
           created_at?: string;
         };
         Update: {
           ended_at?: string | null;
+          viewer_fingerprint?: string | null;
         };
       };
       downloads: {

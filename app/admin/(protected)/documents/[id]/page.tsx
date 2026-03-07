@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { updateDocumentLanding } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -43,7 +44,8 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
     supabase.from("space_documents").select("spaces (id, name)").eq("document_id", document.id)
   ]);
 
-  const { data: signed } = await supabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 30);
+  const adminSupabase = createAdminClient();
+  const { data: signed } = await adminSupabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 30);
   const landing = ((document.landing_page ?? {}) as LandingConfig) || {};
   const action = updateDocumentLanding.bind(null, document.id);
 

@@ -35,7 +35,7 @@ export async function getShareLinkByToken(token: string) {
   const supabase = createAdminClient();
   const { data: link } = await supabase
     .from("share_links")
-    .select("id, link_type, token, requires_intake, space_id, document_id, organization_id, expires_at, name")
+    .select("id, link_type, token, requires_intake, space_id, document_id, organization_id, expires_at, name, intake_settings")
     .eq("token", token)
     .maybeSingle();
 

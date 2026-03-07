@@ -26,10 +26,10 @@ export default async function AnalyticsPage() {
 
   const [allViewsQuery, recentViewsQuery, allDownloadsQuery, allSubmissionsQuery] = targetFilter
     ? await Promise.all([
-        supabase.from("view_sessions").select("id, document_id, space_id, visitor_submission_id").or(targetFilter),
+        supabase.from("view_sessions").select("id, document_id, space_id, visitor_submission_id, viewer_fingerprint").or(targetFilter),
         supabase
           .from("view_sessions")
-          .select("id, document_id, space_id, visitor_submission_id, created_at")
+          .select("id, document_id, space_id, visitor_submission_id, viewer_fingerprint, created_at")
           .or(targetFilter)
           .order("created_at", { ascending: false })
           .limit(12),
@@ -44,7 +44,7 @@ export default async function AnalyticsPage() {
   const allSubmissions = allSubmissionsQuery.data ?? [];
 
   const uniqueViewerCount = new Set(
-    allViews.map((view) => view.visitor_submission_id).filter((id): id is string => Boolean(id))
+    allViews.map((view) => view.visitor_submission_id || view.viewer_fingerprint || view.id)
   ).size;
 
   const perDocument = new Map<string, { title: string; views: number; downloads: number }>();

@@ -1,28 +1,41 @@
 # Internal DocSend MVP
 
-Internal/proprietary DocSend-style platform built with:
-- Next.js App Router + TypeScript + Tailwind
-- Supabase (Auth, Postgres, Storage)
-- Resend (optional transactional emails)
+DocSend-style internal sharing app built with **Next.js App Router + TypeScript + Tailwind + Supabase + optional Resend**, designed to deploy on **Vercel**.
 
-## What exists now
+## Architecture (current)
 
-- Admin app at `/admin` with:
-  - Dashboard
-  - Documents (upload/list/detail)
-  - Spaces (list/create/edit/detail)
-  - Share Links (create/configure)
-  - Analytics
-  - Settings
-- Public share pages at `/s/:token`
-- Intake form gating with access grants
-- Tracked view/download/submission analytics stored in Supabase tables
-- Structured landing-page customization for both documents and spaces
-- System dark/light theme via centralized tokens in `app/globals.css`
+- **Admin app**: `/admin/*`
+  - Login, dashboard, documents, spaces, share links, analytics, settings.
+- **Public share pages**: `/s/:token`
+  - Supports document links and space links.
+  - Optional intake gate with custom fields.
+- **Storage**: Supabase Storage bucket `documents` (private).
+  - PDFs upload directly from browser to Storage using short-lived signed upload URL.
+- **DB**: Supabase Postgres tables for organizations, docs, spaces, share links, intake submissions, views/downloads.
+- **Email (optional)**: Resend for lead notifications.
 
 ---
 
-## Local setup
+## Required environment variables
+
+### Required for app runtime
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SITE_URL`
+
+### Optional (lead notification emails)
+
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `LEAD_NOTIFICATION_EMAIL`
+
+Use `.env.example` as a starting point.
+
+---
+
+## Local development
 
 ```bash
 npm install
@@ -30,7 +43,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Optional checks:
+Checks:
 
 ```bash
 npm run typecheck
@@ -40,18 +53,19 @@ npm run build
 
 ---
 
-## Supabase setup
+## Supabase setup (exact)
 
 1. Create a Supabase project.
-2. Run migrations in order:
+2. Run SQL migrations in order:
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_public_share_links.sql`
    - `supabase/migrations/0003_branding_and_landing.sql`
-3. Create storage bucket:
+   - `supabase/migrations/0004_upload_and_analytics_cleanup.sql`
+3. Create Storage bucket:
    - Name: `documents`
-   - Public: `false`
-4. Create first admin user in Supabase Auth.
-5. Seed org + membership:
+   - Public: `false` (private)
+4. Create first admin user in Supabase Auth (email/password).
+5. Seed org + membership for that user:
 
 ```sql
 insert into public.organizations (name, created_by)
@@ -68,50 +82,42 @@ on conflict (id) do update set full_name = excluded.full_name;
 
 ---
 
-## Resend setup (optional)
+## Vercel deployment (default flow)
 
-Used for new lead notifications on intake submission.
+1. Push repo to GitHub.
+2. Import project in Vercel.
+3. Set framework preset to Next.js (default).
+4. Add env vars in Vercel Project Settings:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_SITE_URL` (set to your production URL)
+   - Optional Resend vars.
+5. Deploy.
+6. (Optional) add custom domain and update `NEXT_PUBLIC_SITE_URL`.
 
-Required env vars:
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-- `LEAD_NOTIFICATION_EMAIL`
-
-If not set, email sending is safely skipped.
-
----
-
-## Theme tokens (brand control)
-
-All major color tokens are centralized in `app/globals.css`:
-- background
-- foreground
-- muted
-- card
-- border
-- primary
-- secondary
-- success
-- warning
-- danger
-
-Update brand/accent colors there to apply globally.
+No additional infra/services required.
 
 ---
 
-## Deployment notes
+## Manual setup checklist
 
-- Deploy app to Vercel
-- Supabase remains DB/Auth/Storage backend
-- Point `docs.multipliedhq.com` DNS later to Vercel
-- Set `NEXT_PUBLIC_SITE_URL` to production URL in Vercel env
+### Supabase
+- [ ] Migrations 0001 → 0004 applied
+- [ ] Private `documents` bucket exists
+- [ ] At least one Auth user exists
+- [ ] Org + membership seed SQL executed
+
+### Vercel
+- [ ] All required env vars configured
+- [ ] Production deployment succeeds
+- [ ] `NEXT_PUBLIC_SITE_URL` matches production domain
 
 ---
 
-## Next step follow-ups (non-blocking)
+## Current MVP limitations
 
-- Add drag-and-drop field ordering in admin (currently order is by row)
-- Add visual preview for landing-page variants inside admin
-- Add richer CTA behaviors (inline modal, routed CTA types)
-- Add more robust per-field validation presets beyond regex
-- Add file/image upload helper for landing hero/logo assets
+- No antivirus/virus scanning on uploaded PDFs.
+- Intake success UI is a simple post-submit banner.
+- View deduping is fingerprint/time-window based (best-effort, not perfect identity).
+- No background jobs/queues; all behavior is request-time MVP logic.

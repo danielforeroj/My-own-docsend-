@@ -114,38 +114,6 @@ function parseLandingForm(formData: FormData) {
   };
 }
 
-export async function uploadDocument(formData: FormData) {
-  const ctx = await requireAdminContext();
-  const supabase = await createClient();
-
-  const file = formData.get("file");
-  const title = String(formData.get("title") || "").trim();
-
-  if (!(file instanceof File) || !file.size) throw new Error("A PDF file is required.");
-  if (file.type !== "application/pdf") throw new Error("Only PDF files are supported.");
-  if (!title) throw new Error("Document title is required.");
-
-  const storagePath = `${ctx.organizationId}/${Date.now()}-${file.name}`;
-
-  const { error: uploadError } = await supabase.storage.from("documents").upload(storagePath, file, {
-    contentType: file.type,
-    upsert: false
-  });
-  if (uploadError) throw new Error(uploadError.message);
-
-  const { error: insertError } = await supabase.from("documents").insert({
-    organization_id: ctx.organizationId,
-    uploaded_by: ctx.userId,
-    title,
-    storage_path: storagePath,
-    file_size: file.size,
-    mime_type: file.type
-  });
-  if (insertError) throw new Error(insertError.message);
-
-  revalidatePath("/admin/documents");
-}
-
 export async function createSpace(formData: FormData) {
   const ctx = await requireAdminContext();
   const supabase = await createClient();

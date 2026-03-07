@@ -91,5 +91,5 @@ export async function submitIntake(token: string, formData: FormData) {
     expires: new Date(expiresAt)
   });
 
-  redirect(`/s/${token}`);
+  redirect(`/s/${token}?submitted=1`);
 }
