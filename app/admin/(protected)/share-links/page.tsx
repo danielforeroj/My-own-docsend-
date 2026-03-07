@@ -8,50 +8,48 @@ export default async function ShareLinksPage() {
 
   const { data: links, error } = await supabase
     .from("share_links")
-    .select("id, token, name, link_type, created_at, requires_intake, space_id, document_id")
+    .select("id, token, name, link_type, created_at, requires_intake")
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Share Links</h1>
+    <div className="space-y-6">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Distribution</p>
+        <h1 className="text-3xl font-semibold tracking-tight">Share Links</h1>
+        <p className="text-muted-foreground">Manage secure public links and lead capture settings.</p>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200">
+      <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-100 text-slate-600">
+          <thead className="border-b border-border bg-background text-muted-foreground">
             <tr>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Type</th>
-              <th className="px-4 py-2">Intake</th>
-              <th className="px-4 py-2">Public URL</th>
-              <th className="px-4 py-2">Actions</th>
+              <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Intake</th>
+              <th className="px-4 py-3">Public URL</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {links?.map((link) => (
-              <tr key={link.id} className="border-t border-slate-200">
-                <td className="px-4 py-2">{link.name || "-"}</td>
-                <td className="px-4 py-2">{link.link_type}</td>
-                <td className="px-4 py-2">{link.requires_intake ? "Required" : "Disabled"}</td>
-                <td className="px-4 py-2 text-xs">/s/{link.token}</td>
-                <td className="space-x-3 px-4 py-2">
-                  <Link className="underline" href={`/admin/share-links/${link.id}`}>
-                    Configure
-                  </Link>
-                  <Link className="underline" href={`/s/${link.token}`} target="_blank">
-                    Open
-                  </Link>
+              <tr key={link.id} className="border-b border-border last:border-b-0">
+                <td className="px-4 py-3 font-medium">{link.name || "Untitled link"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{link.link_type}</td>
+                <td className="px-4 py-3 text-muted-foreground">{link.requires_intake ? "Required" : "Disabled"}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">/s/{link.token}</td>
+                <td className="space-x-2 px-4 py-3 text-right">
+                  <Link className="btn-secondary inline-flex" href={`/admin/share-links/${link.id}`}>Configure</Link>
+                  <Link className="btn-secondary inline-flex" href={`/s/${link.token}`} target="_blank">Open</Link>
                 </td>
               </tr>
             ))}
             {!links?.length ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={5}>
-                  No share links yet. Create one from Documents or Spaces.
+                <td className="px-4 py-12 text-center text-muted-foreground" colSpan={5}>
+                  No share links yet. Create one from a document or space.
                 </td>
               </tr>
             ) : null}

@@ -15,34 +15,43 @@ export default async function SpacesPage() {
   if (error) throw new Error(error.message);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Spaces</h1>
-        <Link href="/admin/spaces/new" className="bg-slate-900 text-white">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Data rooms</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Spaces</h1>
+          <p className="text-muted-foreground">Group documents into polished spaces for clients and partners.</p>
+        </div>
+        <Link href="/admin/spaces/new" className="btn-primary inline-flex items-center justify-center">
           New Space
         </Link>
       </div>
-      <div className="overflow-hidden rounded-lg border border-slate-200">
+
+      <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-100 text-slate-600">
+          <thead className="border-b border-border bg-background text-muted-foreground">
             <tr>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Slug</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Actions</th>
+              <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Slug</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {spaces?.map((space) => (
-              <tr key={space.id} className="border-t border-slate-200">
-                <td className="px-4 py-2"><Link className="underline" href={`/admin/spaces/${space.id}`}>{space.name}</Link></td>
-                <td className="px-4 py-2 text-slate-600">{space.slug}</td>
-                <td className="px-4 py-2">{space.is_active ? "Active" : "Inactive"}</td>
-                <td className="space-x-3 px-4 py-2">
-                  <Link className="text-slate-700 underline" href={`/admin/spaces/${space.id}/edit`}>
+              <tr key={space.id} className="border-b border-border last:border-b-0">
+                <td className="px-4 py-3"><Link className="font-medium hover:underline" href={`/admin/spaces/${space.id}`}>{space.name}</Link></td>
+                <td className="px-4 py-3 text-muted-foreground">{space.slug}</td>
+                <td className="px-4 py-3">
+                  <span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                    {space.is_active ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td className="space-x-2 px-4 py-3 text-right">
+                  <Link className="btn-secondary inline-flex items-center" href={`/admin/spaces/${space.id}/edit`}>
                     Edit
                   </Link>
-                  <Link className="text-slate-700 underline" href={`/admin/share-links/new?targetType=space&targetId=${space.id}`}>
+                  <Link className="btn-secondary inline-flex items-center" href={`/admin/share-links/new?targetType=space&targetId=${space.id}`}>
                     Create link
                   </Link>
                 </td>
@@ -50,8 +59,8 @@ export default async function SpacesPage() {
             ))}
             {!spaces?.length ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={4}>
-                  No spaces yet.
+                <td className="px-4 py-12 text-center text-muted-foreground" colSpan={4}>
+                  No spaces yet. Create one to start building structured data rooms.
                 </td>
               </tr>
             ) : null}

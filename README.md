@@ -1,35 +1,36 @@
 # Internal DocSend MVP
 
-Lean internal DocSend-style platform for agencies/projects using:
+Internal/proprietary DocSend-style platform built with:
 - Next.js App Router + TypeScript + Tailwind
-- Supabase (Auth + Postgres + Storage)
-- Resend (transactional email notifications)
-- Vercel (deployment)
+- Supabase (Auth, Postgres, Storage)
+- Resend (optional transactional emails)
+
+## What exists now
+
+- Admin app at `/admin` with:
+  - Dashboard
+  - Documents (upload/list/detail)
+  - Spaces (list/create/edit/detail)
+  - Share Links (create/configure)
+  - Analytics
+  - Settings
+- Public share pages at `/s/:token`
+- Intake form gating with access grants
+- Tracked view/download/submission analytics stored in Supabase tables
+- Structured landing-page customization for both documents and spaces
+- System dark/light theme via centralized tokens in `app/globals.css`
 
 ---
 
 ## Local setup
 
-1. Install dependencies:
-
 ```bash
 npm install
-```
-
-2. Create local env file:
-
-```bash
 cp .env.example .env.local
-```
-
-3. Fill `.env.local` values.
-4. Start local app:
-
-```bash
 npm run dev
 ```
 
-5. Optional verification:
+Optional checks:
 
 ```bash
 npm run typecheck
@@ -42,14 +43,15 @@ npm run build
 ## Supabase setup
 
 1. Create a Supabase project.
-2. Run SQL migrations in order:
+2. Run migrations in order:
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_public_share_links.sql`
-3. Create Storage bucket:
+   - `supabase/migrations/0003_branding_and_landing.sql`
+3. Create storage bucket:
    - Name: `documents`
    - Public: `false`
-4. Create first admin user in Supabase Auth (email/password).
-5. Seed initial organization + membership:
+4. Create first admin user in Supabase Auth.
+5. Seed org + membership:
 
 ```sql
 insert into public.organizations (name, created_by)
@@ -64,70 +66,52 @@ values ('YOUR_USER_ID', 'Founding Admin')
 on conflict (id) do update set full_name = excluded.full_name;
 ```
 
-6. Login at `/admin/login`.
-
-### Current analytics tracking (internal DB only)
-
-Analytics is persisted to your own Supabase database (no PostHog/third-party analytics):
-- `view_sessions`: views + recent visits + per-document/per-space counts
-- `downloads`: tracked downloads from `/s/:token/download/:documentId`
-- `visitor_submissions`: captured intake leads
-
 ---
 
-## Resend setup
+## Resend setup (optional)
 
-Resend is used for **new lead notification** emails after intake submissions.
+Used for new lead notifications on intake submission.
 
 Required env vars:
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `LEAD_NOTIFICATION_EMAIL`
 
-Behavior:
-- If all three vars are set, lead notification emails are sent.
-- If any are missing, email sending is skipped safely (no crash).
+If not set, email sending is safely skipped.
 
 ---
 
-## Deploy to Vercel
+## Theme tokens (brand control)
 
-1. Push repo to GitHub/GitLab/Bitbucket.
-2. Import project in Vercel.
-3. Set framework to **Next.js** (auto-detected).
-4. Add environment variables in Vercel Project Settings:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `NEXT_PUBLIC_SITE_URL` (use production URL)
-   - `RESEND_API_KEY`
-   - `RESEND_FROM_EMAIL`
-   - `LEAD_NOTIFICATION_EMAIL`
-5. Deploy.
-6. After deploy, set `NEXT_PUBLIC_SITE_URL` to your production domain and redeploy.
+All major color tokens are centralized in `app/globals.css`:
+- background
+- foreground
+- muted
+- card
+- border
+- primary
+- secondary
+- success
+- warning
+- danger
 
----
-
-## Namecheap DNS setup for `docs.multipliedhq.com`
-
-When your Vercel project is ready:
-
-1. In Vercel, add domain: `docs.multipliedhq.com`.
-2. In Namecheap DNS for `multipliedhq.com`, create:
-   - `CNAME` record
-   - Host: `docs`
-   - Value: `cname.vercel-dns.com`
-   - TTL: Automatic
-3. Wait for DNS propagation.
-4. Verify domain status in Vercel becomes valid.
-5. Ensure `NEXT_PUBLIC_SITE_URL=https://docs.multipliedhq.com`.
+Update brand/accent colors there to apply globally.
 
 ---
 
-## Remaining non-blocking follow-ups
+## Deployment notes
 
-- Add pagination for large analytics datasets.
-- Improve unique viewer logic with optional anonymized IP/device fingerprinting.
-- Add admin controls for link expiry and revoke access grants.
-- Add richer branding settings persisted in DB (logo, colors, sender name).
-- Add E2E smoke tests for share-link intake + tracked downloads.
+- Deploy app to Vercel
+- Supabase remains DB/Auth/Storage backend
+- Point `docs.multipliedhq.com` DNS later to Vercel
+- Set `NEXT_PUBLIC_SITE_URL` to production URL in Vercel env
+
+---
+
+## Next step follow-ups (non-blocking)
+
+- Add drag-and-drop field ordering in admin (currently order is by row)
+- Add visual preview for landing-page variants inside admin
+- Add richer CTA behaviors (inline modal, routed CTA types)
+- Add more robust per-field validation presets beyond regex
+- Add file/image upload helper for landing hero/logo assets

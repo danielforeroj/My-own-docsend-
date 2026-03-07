@@ -6,16 +6,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const ctx = await requireAdminContext();
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[220px_1fr]">
-        <aside className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="mb-4 text-xs uppercase tracking-wide text-slate-500">{ctx.role.replace("_", " ")}</p>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[260px_1fr] lg:px-6">
+        <aside className="card h-fit p-4 lg:sticky lg:top-6">
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiplied Docs</p>
+            <p className="text-sm text-muted-foreground">{ctx.role.replace("_", " ")}</p>
+          </div>
           <AdminNav />
-          <div className="mt-6 border-t border-slate-200 pt-4">
+          <div className="mt-6 border-t border-border pt-4">
             <SignOutButton />
           </div>
         </aside>
-        <main className="rounded-lg border border-slate-200 bg-white p-6">{children}</main>
+        <main className="card p-5 md:p-7">{children}</main>
       </div>
     </div>
   );

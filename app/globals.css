@@ -3,19 +3,109 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  --background: #f6f8fb;
+  --foreground: #0d1321;
+  --muted: #5f6b7a;
+  --card: #ffffff;
+  --border: #dbe2ea;
+
+  /* Multiplied brand tokens: update these in one place if brand palette changes */
+  --primary: #4f46e5;
+  --secondary: #06b6d4;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1020;
+    --foreground: #e7ecf3;
+    --muted: #9aa7bb;
+    --card: #121a2b;
+    --border: #24314a;
+    --primary: #7c7fff;
+    --secondary: #22d3ee;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #f87171;
+  }
 }
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
 
 input,
 select,
 textarea {
-  @apply rounded-md border border-slate-300 px-3 py-2 text-sm;
+  @apply rounded-xl border px-3 py-2 text-sm transition focus:outline-none focus:ring-2;
+  border-color: var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  --tw-ring-color: color-mix(in oklab, var(--primary) 40%, transparent);
 }
 
 button {
-  @apply rounded-md px-4 py-2 text-sm font-medium;
+  @apply rounded-xl px-4 py-2 text-sm font-medium transition;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  @apply rounded-2xl shadow-sm;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.text-muted-foreground {
+  color: var(--muted);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.border-border {
+  border-color: var(--border);
+}
+
+.bg-card {
+  background: var(--card);
+}
+
+.bg-background {
+  background: var(--background);
+}
+
+.label {
+  @apply text-sm font-medium;
+}
+
+.stat-label {
+  @apply text-sm;
+  color: var(--muted);
+}
+
+.stat-value {
+  @apply text-2xl font-semibold;
 }

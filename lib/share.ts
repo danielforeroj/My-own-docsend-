@@ -10,6 +10,10 @@ export type ShareField = {
   is_required: boolean;
   options: string[] | null;
   placeholder: string | null;
+  help_text?: string | null;
+  default_value?: string | null;
+  width?: "full" | "half";
+  validation_rule?: string | null;
   position: number;
 };
 
@@ -92,6 +96,17 @@ export function validateIntakeValue(field: ShareField, value: FormDataEntryValue
 
   if (field.field_type === "select" && field.options?.length && !field.options.includes(raw)) {
     return { error: `${field.label} has an invalid option.` };
+  }
+
+  if (field.validation_rule) {
+    try {
+      const regex = new RegExp(field.validation_rule);
+      if (!regex.test(raw)) {
+        return { error: `${field.label} format is invalid.` };
+      }
+    } catch {
+      // ignore invalid admin-provided regex
+    }
   }
 
   return { value: raw };

@@ -12,37 +12,43 @@ export default async function DocumentsPage() {
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Documents</h1>
-        <Link href="/admin/documents/new" className="bg-slate-900 text-white">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Library</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Documents</h1>
+          <p className="text-muted-foreground">Upload, organize, and share PDFs with trackable links.</p>
+        </div>
+        <Link href="/admin/documents/new" className="btn-primary inline-flex items-center justify-center">
           Upload PDF
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200">
+      <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-100 text-slate-600">
+          <thead className="border-b border-border bg-background text-muted-foreground">
             <tr>
-              <th className="px-4 py-2">Title</th>
-              <th className="px-4 py-2">Size</th>
-              <th className="px-4 py-2">Created</th>
-              <th className="px-4 py-2">Share</th>
+              <th className="px-4 py-3">Title</th>
+              <th className="px-4 py-3">Size</th>
+              <th className="px-4 py-3">Created</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {documents?.map((document) => (
-              <tr key={document.id} className="border-t border-slate-200">
-                <td className="px-4 py-2"><Link className="underline" href={`/admin/documents/${document.id}`}>{document.title}</Link></td>
-                <td className="px-4 py-2">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
-                <td className="px-4 py-2">{new Date(document.created_at).toLocaleString()}</td>
-                <td className="px-4 py-2">
-                  <Link className="underline" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>
+              <tr key={document.id} className="border-b border-border last:border-b-0">
+                <td className="px-4 py-3">
+                  <Link className="font-medium hover:underline" href={`/admin/documents/${document.id}`}>
+                    {document.title}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
+                <td className="px-4 py-3 text-right">
+                  <Link className="btn-secondary inline-flex items-center" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>
                     Create link
                   </Link>
                 </td>
@@ -50,8 +56,8 @@ export default async function DocumentsPage() {
             ))}
             {!documents?.length ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={4}>
-                  No documents yet.
+                <td className="px-4 py-12 text-center text-muted-foreground" colSpan={4}>
+                  No documents yet. Upload your first PDF to get started.
                 </td>
               </tr>
             ) : null}

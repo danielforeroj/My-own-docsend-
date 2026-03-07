@@ -71,6 +71,7 @@ export type Database = {
           file_size: number | null;
           mime_type: string | null;
           created_at: string;
+          landing_page: Json;
         };
         Insert: {
           id?: string;
@@ -81,9 +82,11 @@ export type Database = {
           file_size?: number | null;
           mime_type?: string | null;
           created_at?: string;
+          landing_page?: Json;
         };
         Update: {
           title?: string;
+          landing_page?: Json;
         };
       };
       spaces: {
@@ -97,6 +100,7 @@ export type Database = {
           is_active: boolean;
           created_at: string;
           updated_at: string;
+          landing_page: Json;
         };
         Insert: {
           id?: string;
@@ -108,6 +112,7 @@ export type Database = {
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
+          landing_page?: Json;
         };
         Update: {
           name?: string;
@@ -115,6 +120,7 @@ export type Database = {
           description?: string | null;
           is_active?: boolean;
           updated_at?: string;
+          landing_page?: Json;
         };
       };
       space_documents: {
@@ -149,6 +155,7 @@ export type Database = {
           expires_at: string | null;
           created_by: string;
           created_at: string;
+          intake_settings: Json;
         };
         Insert: {
           id?: string;
@@ -162,11 +169,13 @@ export type Database = {
           expires_at?: string | null;
           created_by: string;
           created_at?: string;
+          intake_settings?: Json;
         };
         Update: {
           name?: string | null;
           requires_intake?: boolean;
           expires_at?: string | null;
+          intake_settings?: Json;
         };
       };
       share_link_fields: {
@@ -179,6 +188,10 @@ export type Database = {
           is_required: boolean;
           options: Json | null;
           placeholder: string | null;
+          help_text: string | null;
+          default_value: string | null;
+          width: "full" | "half";
+          validation_rule: string | null;
           position: number;
           created_at: string;
         };
@@ -191,6 +204,10 @@ export type Database = {
           is_required?: boolean;
           options?: Json | null;
           placeholder?: string | null;
+          help_text?: string | null;
+          default_value?: string | null;
+          width?: "full" | "half";
+          validation_rule?: string | null;
           position?: number;
           created_at?: string;
         };
@@ -201,6 +218,10 @@ export type Database = {
           is_required?: boolean;
           options?: Json | null;
           placeholder?: string | null;
+          help_text?: string | null;
+          default_value?: string | null;
+          width?: "full" | "half";
+          validation_rule?: string | null;
           position?: number;
         };
       };

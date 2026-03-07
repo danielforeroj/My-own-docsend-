@@ -18,7 +18,7 @@ export function SignOutButton() {
   };
 
   return (
-    <button className="border border-slate-300" onClick={onSignOut} disabled={pending}>
+    <button className="btn-secondary w-full" onClick={onSignOut} disabled={pending}>
       {pending ? "Signing out..." : "Sign out"}
     </button>
   );
