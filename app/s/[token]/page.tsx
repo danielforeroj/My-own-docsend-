@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -111,9 +112,9 @@ function PublicShell({
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6">
       <section className={sectionClass}>
-        {landing.hero_image_url && variant !== "minimal_header" ? <img src={landing.hero_image_url} alt="hero" className="h-52 w-full object-cover" /> : null}
+        {landing.hero_image_url && variant !== "minimal_header" ? <Image src={landing.hero_image_url} alt="hero" width={1600} height={320} unoptimized className="h-52 w-full object-cover" /> : null}
         <div className="p-6 md:p-10">
-          {landing.logo_url ? <img src={landing.logo_url} alt="logo" className="mb-4 h-8 w-auto" /> : null}
+          {landing.logo_url ? <Image src={landing.logo_url} alt="logo" width={240} height={64} unoptimized className="mb-4 h-8 w-auto" /> : null}
           {landing.eyebrow ? <p className="text-xs font-semibold uppercase tracking-wide text-primary">{landing.eyebrow}</p> : null}
           <h1 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">{heading}</h1>
           {body ? <p className="mt-3 max-w-3xl text-muted-foreground">{body}</p> : null}

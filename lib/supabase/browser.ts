@@ -16,7 +16,7 @@ function createMockBrowserClient() {
         uploadToSignedUrl: async () => ({ error: { message: "Supabase is not configured." } })
       })
     }
-  } as any;
+  } as unknown as ReturnType<typeof createBrowserClient<Database>>;
 }
 
 export function createClient() {

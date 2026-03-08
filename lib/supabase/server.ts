@@ -8,7 +8,7 @@ import { isSupabaseConfigured } from "@/lib/runtime";
 
 function createMockQueryBuilder() {
   const result = Promise.resolve({ data: [], error: null, count: 0 });
-  const handler: ProxyHandler<any> = {
+  const handler: ProxyHandler<object> = {
     get(_target, prop) {
       if (prop === "then") return result.then.bind(result);
       if (prop === "single" || prop === "maybeSingle") return () => Promise.resolve({ data: null, error: null });
@@ -31,7 +31,7 @@ function createMockSupabaseClient() {
         list: async () => ({ data: [], error: null })
       })
     }
-  } as any;
+  } as unknown as ReturnType<typeof createServerClient<Database>>;
 }
 
 export async function createClient() {
