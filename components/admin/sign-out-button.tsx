@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
+import { isDemoMode } from "@/lib/runtime";
 
 export function SignOutButton() {
   const [pending, startTransition] = useTransition();
@@ -19,7 +20,7 @@ export function SignOutButton() {
 
   return (
     <button className="btn-secondary w-full" onClick={onSignOut} disabled={pending}>
-      {pending ? "Signing out..." : "Sign out"}
+      {pending ? "Signing out..." : isDemoMode() ? "Exit demo" : "Sign out"}
     </button>
   );
 }
