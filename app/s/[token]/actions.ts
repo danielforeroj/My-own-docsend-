@@ -1,0 +1,95 @@
+"use server";
+
+import { createHash, randomUUID } from "crypto";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendNewLeadNotificationEmail } from "@/lib/resend";
+import { getShareLinkByToken, grantCookieName, validateIntakeValue } from "@/lib/share";
+
+export async function submitIntake(token: string, formData: FormData) {
+  const link = await getShareLinkByToken(token);
+  if (!link) throw new Error("Invalid or expired share link.");
+
+  const supabase = createAdminClient();
+
+  const { data: fields } = await supabase
+    .from("share_link_fields")
+    .select("id, field_name, label, field_type, is_required, options, placeholder, position")
+    .eq("share_link_id", link.id)
+    .order("position");
+
+  const payload: Record<string, string | boolean> = {};
+
+  for (const field of fields ?? []) {
+    const result = validateIntakeValue(
+      {
+        ...field,
+        options: Array.isArray(field.options) ? (field.options as string[]) : null
+      },
+      formData.get(field.field_name)
+    );
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    payload[field.field_name] = result.value as string | boolean;
+  }
+
+  const headerStore = await headers();
+  const userAgent = headerStore.get("user-agent");
+  const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const ipHash = forwardedFor ? createHash("sha256").update(forwardedFor).digest("hex") : null;
+  const submittedAt = new Date().toISOString();
+
+  const { data: submission, error: submissionError } = await supabase
+    .from("visitor_submissions")
+    .insert({
+      share_link_id: link.id,
+      space_id: link.space_id,
+      document_id: link.document_id,
+      payload,
+      ip_hash: ipHash,
+      user_agent: userAgent,
+      created_at: submittedAt
+    })
+    .select("id")
+    .single();
+
+  if (submissionError || !submission) {
+    throw new Error(submissionError?.message || "Failed to submit intake form.");
+  }
+
+  await sendNewLeadNotificationEmail({
+    shareToken: token,
+    linkName: link.name,
+    payload,
+    submittedAt
+  });
+
+  const accessToken = randomUUID().replace(/-/g, "");
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString();
+
+  const { error: grantError } = await supabase.from("share_link_access_grants").insert({
+    share_link_id: link.id,
+    visitor_submission_id: submission.id,
+    token: accessToken,
+    expires_at: expiresAt
+  });
+
+  if (grantError) {
+    throw new Error(grantError.message);
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(grantCookieName(link.id), accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(expiresAt)
+  });
+
+  redirect(`/s/${token}?submitted=1`);
+}
