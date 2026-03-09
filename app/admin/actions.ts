@@ -1,9 +1,17 @@
 "use server";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClientOrNull } from "@/lib/supabase/server";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
+
+
+function shouldDisableMutations() {
+  return isDemoMode() || !isSupabaseConfigured();
+}
 
 type AllowedFieldType = "text" | "email" | "phone" | "textarea" | "select" | "checkbox";
 const ALLOWED_FIELD_TYPES = new Set<AllowedFieldType>(["text", "email", "phone", "textarea", "select", "checkbox"]);
@@ -92,6 +100,23 @@ function parseFieldRows(formData: FormData) {
   return rows;
 }
 
+
+function parseVisibilityForm(formData: FormData) {
+  const visibilityRaw = String(formData.get("visibility") || "private").trim();
+  const visibility = visibilityRaw === "public" ? "public" : "private";
+  const publicSlugRaw = String(formData.get("public_slug") || "").trim();
+  const publicSlug = publicSlugRaw ? slugify(publicSlugRaw) : null;
+  const showInCatalog = formData.get("show_in_catalog") === "on";
+  const isFeatured = formData.get("is_featured") === "on";
+
+  return {
+    visibility,
+    public_slug: visibility === "public" ? publicSlug : null,
+    show_in_catalog: visibility === "public" ? showInCatalog : false,
+    is_featured: visibility === "public" ? isFeatured : false
+  };
+}
+
 function parseLandingForm(formData: FormData) {
   return {
     page_title: String(formData.get("landing_page_title") || "").trim() || null,
@@ -115,8 +140,14 @@ function parseLandingForm(formData: FormData) {
 }
 
 export async function createSpace(formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -151,8 +182,14 @@ export async function createSpace(formData: FormData) {
 }
 
 export async function updateSpace(spaceId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
   await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -181,8 +218,14 @@ export async function updateSpace(spaceId: string, formData: FormData) {
 }
 
 export async function createShareLink(formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/share-links");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
 
   const targetType = String(formData.get("target_type") || "");
   const targetId = String(formData.get("target_id") || "");
@@ -233,8 +276,14 @@ export async function createShareLink(formData: FormData) {
 }
 
 export async function updateShareLinkFields(shareLinkId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/share-links");
+    return;
+  }
+
   await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const requiresIntake = formData.get("requires_intake") === "on";
@@ -266,8 +315,14 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
 }
 
 export async function updateDocumentLanding(documentId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/documents");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
 
@@ -282,14 +337,65 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 }
 
 export async function updateSpaceLanding(spaceId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
 
   const { error } = await supabase
     .from("spaces")
     .update({ landing_page: landingPage, updated_at: new Date().toISOString() })
+    .eq("id", spaceId)
+    .eq("organization_id", ctx.organizationId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/spaces/${spaceId}`);
+}
+
+
+export async function updateDocumentVisibility(documentId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/documents");
+    return;
+  }
+
+  const ctx = await requireAdminContext();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
+
+  const payload = parseVisibilityForm(formData);
+
+  const { error } = await supabase
+    .from("documents")
+    .update(payload)
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/documents/${documentId}`);
+}
+
+export async function updateSpaceVisibility(spaceId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
+  const ctx = await requireAdminContext();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
+
+  const payload = parseVisibilityForm(formData);
+
+  const { error } = await supabase
+    .from("spaces")
+    .update(payload)
     .eq("id", spaceId)
     .eq("organization_id", ctx.organizationId);
 

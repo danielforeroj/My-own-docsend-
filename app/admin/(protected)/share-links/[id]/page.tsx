@@ -4,12 +4,13 @@ import { updateShareLinkFields } from "@/app/admin/actions";
 import { IntakeFieldsEditor, type EditableField } from "@/components/admin/intake-fields-editor";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/db/types";
 
 export default async function ShareLinkSettingsPage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const [{ data: link }, { data: fields }] = await Promise.all([
+  const [{ data: linkData }, { data: fieldsData }] = await Promise.all([
     supabase
       .from("share_links")
       .select("id, token, link_type, name, requires_intake, intake_settings")
@@ -22,6 +23,18 @@ export default async function ShareLinkSettingsPage({ params }: { params: { id: 
       .eq("share_link_id", params.id)
       .order("position")
   ]);
+
+  type ShareLinkRow = Pick<
+    Database["public"]["Tables"]["share_links"]["Row"],
+    "id" | "token" | "name" | "requires_intake" | "intake_settings"
+  >;
+  type ShareLinkFieldRow = Pick<
+    Database["public"]["Tables"]["share_link_fields"]["Row"],
+    "field_name" | "label" | "field_type" | "is_required" | "options" | "placeholder" | "help_text" | "default_value" | "width" | "validation_rule"
+  >;
+
+  const link = linkData as ShareLinkRow | null;
+  const fields = (fieldsData ?? []) as ShareLinkFieldRow[];
 
   if (!link) notFound();
 

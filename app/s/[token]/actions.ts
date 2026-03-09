@@ -1,17 +1,23 @@
 "use server";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createHash, randomUUID } from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNewLeadNotificationEmail } from "@/lib/resend";
 import { getShareLinkByToken, grantCookieName, validateIntakeValue } from "@/lib/share";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 
 export async function submitIntake(token: string, formData: FormData) {
+  if (isDemoMode() || !isSupabaseConfigured()) {
+    redirect(`/s/${token}?submitted=1&demo=1`);
+  }
   const link = await getShareLinkByToken(token);
   if (!link) throw new Error("Invalid or expired share link.");
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient() as any;
 
   const { data: fields } = await supabase
     .from("share_link_fields")
