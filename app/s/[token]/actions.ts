@@ -6,8 +6,12 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNewLeadNotificationEmail } from "@/lib/resend";
 import { getShareLinkByToken, grantCookieName, validateIntakeValue } from "@/lib/share";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 
 export async function submitIntake(token: string, formData: FormData) {
+  if (isDemoMode() || !isSupabaseConfigured()) {
+    redirect(`/s/${token}?submitted=1&demo=1`);
+  }
   const link = await getShareLinkByToken(token);
   if (!link) throw new Error("Invalid or expired share link.");
 

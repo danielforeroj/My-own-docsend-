@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { createClientOrNull } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 
 export function SignOutButton() {
@@ -10,8 +10,10 @@ export function SignOutButton() {
 
   const onSignOut = () => {
     startTransition(async () => {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+      const supabase = createClientOrNull();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
       router.push("/admin/login");
       router.refresh();
     });
