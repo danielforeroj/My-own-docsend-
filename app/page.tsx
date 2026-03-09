@@ -21,13 +21,8 @@ export default async function HomePage() {
         <p className="mt-3 max-w-3xl text-muted-foreground">
           Browse published spaces and documents. Only items explicitly marked public and allowed in catalog appear here.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link className="btn-primary" href="/admin/login">
-            Admin login
-          </Link>
-          <Link className="btn-secondary" href="/admin">
-            Open admin workspace
-          </Link>
+        <div className="mt-5 rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+          Explore public spaces and documents below. This catalog only surfaces items explicitly marked for public access.
         </div>
         {source === "demo" ? <p className="mt-4 text-xs text-yellow-300">Demo mode: catalog uses mock public content.</p> : null}
       </section>

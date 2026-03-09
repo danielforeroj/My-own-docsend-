@@ -40,8 +40,12 @@ async function getMembershipContext(userId: string): Promise<Omit<AuthContext, "
 }
 
 export async function requireAdminContext(): Promise<AuthContext> {
-  if (isDemoMode() || !isSupabaseConfigured()) {
+  if (isDemoMode()) {
     return demoContext;
+  }
+
+  if (!isSupabaseConfigured()) {
+    redirect("/admin/login");
   }
 
   const supabase = await createClientOrNull();
@@ -68,8 +72,12 @@ export async function requireAdminContext(): Promise<AuthContext> {
 }
 
 export async function getAdminContextOrNull(): Promise<AuthContext | null> {
-  if (isDemoMode() || !isSupabaseConfigured()) {
+  if (isDemoMode()) {
     return demoContext;
+  }
+
+  if (!isSupabaseConfigured()) {
+    return null;
   }
 
   const supabase = await createClientOrNull();
