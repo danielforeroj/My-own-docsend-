@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { createClientOrNull } from "@/lib/supabase/browser";
+import { isSupabaseConfigured } from "@/lib/runtime";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
@@ -10,13 +11,25 @@ export default function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const supabaseReady = isSupabaseConfigured();
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
+    if (!supabaseReady) {
+      setError("Supabase is not configured yet. Add Supabase environment variables to enable admin login.");
+      return;
+    }
+
     startTransition(async () => {
-      const supabase = createClient();
+      const supabase = createClientOrNull();
+
+      if (!supabase) {
+        setError("Supabase is not configured yet. Add Supabase environment variables to enable admin login.");
+        return;
+      }
+
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (signInError) {
@@ -38,19 +51,25 @@ export default function AdminLoginPage() {
           <p className="text-sm text-muted-foreground">Use your Supabase-authenticated admin credentials.</p>
         </div>
 
+        {!supabaseReady ? (
+          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
+            Supabase is not configured yet. Login will be available after setting NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
+          </p>
+        ) : null}
+
         <div className="space-y-2">
           <label className="label">Email</label>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" />
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={!supabaseReady} />
         </div>
 
         <div className="space-y-2">
           <label className="label">Password</label>
-          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" />
+          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" disabled={!supabaseReady} />
         </div>
 
         {error ? <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p> : null}
 
-        <button className="btn-primary w-full" disabled={pending}>
+        <button className="btn-primary w-full" disabled={pending || !supabaseReady}>
           {pending ? "Signing in..." : "Sign in"}
         </button>
       </form>
