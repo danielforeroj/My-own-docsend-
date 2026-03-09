@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { FieldType } from "@/lib/db/types";
+import { FieldType, type Database } from "@/lib/db/types";
 
 export type ShareField = {
   id: string;
@@ -16,6 +16,10 @@ export type ShareField = {
   validation_rule?: string | null;
   position: number;
 };
+
+
+type ShareLinkRow = Database["public"]["Tables"]["share_links"]["Row"];
+type AccessGrantRow = Database["public"]["Tables"]["share_link_access_grants"]["Row"];
 
 const SHARE_TOKEN_REGEX = /^[a-f0-9]{32}$/i;
 
@@ -33,11 +37,13 @@ export async function getShareLinkByToken(token: string) {
   }
 
   const supabase = createAdminClient();
-  const { data: link } = await supabase
+  const { data: linkData } = await supabase
     .from("share_links")
     .select("id, link_type, token, requires_intake, space_id, document_id, organization_id, expires_at, name, intake_settings")
     .eq("token", token)
     .maybeSingle();
+
+  const link = linkData as ShareLinkRow | null;
 
   if (!link || isExpired(link.expires_at)) {
     return null;
@@ -56,7 +62,7 @@ export async function getValidAccessGrant(shareLinkId: string) {
   if (!token) return null;
 
   const supabase = createAdminClient();
-  const { data } = await supabase
+  const { data: grantData } = await supabase
     .from("share_link_access_grants")
     .select("id, expires_at, visitor_submission_id")
     .eq("share_link_id", shareLinkId)
@@ -64,7 +70,7 @@ export async function getValidAccessGrant(shareLinkId: string) {
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
-  return data;
+  return (grantData as AccessGrantRow | null);
 }
 
 export function validateIntakeValue(field: ShareField, value: FormDataEntryValue | null) {

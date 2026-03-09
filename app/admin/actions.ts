@@ -1,5 +1,7 @@
 "use server";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { requireAdminContext } from "@/lib/auth/server";
@@ -144,7 +146,7 @@ export async function createSpace(formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
@@ -186,7 +188,7 @@ export async function updateSpace(spaceId: string, formData: FormData) {
   }
 
   await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
@@ -222,7 +224,7 @@ export async function createShareLink(formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const targetType = String(formData.get("target_type") || "");
@@ -280,7 +282,7 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
   }
 
   await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
@@ -319,7 +321,7 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
   }
 
   const ctx = await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
@@ -341,7 +343,7 @@ export async function updateSpaceLanding(spaceId: string, formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
@@ -364,7 +366,7 @@ export async function updateDocumentVisibility(documentId: string, formData: For
   }
 
   const ctx = await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
@@ -386,7 +388,7 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
   }
 
   const ctx = await requireAdminContext();
-  const supabase = await createClientOrNull();
+  const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);

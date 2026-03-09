@@ -4,6 +4,7 @@ import { createClientOrNull } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 import { mockAnalyticsSummary, mockBrandingSettings, mockDocuments, mockShareLinks, mockSpaces } from "@/lib/data/mock";
+import type { Database } from "@/lib/db/types";
 
 export function shouldUseDemoData() {
   return isDemoMode() || !isSupabaseConfigured();
@@ -118,14 +119,17 @@ export async function getSettingsData(organizationId: string) {
   }
   const supabase = await createClientOrNull();
   if (!supabase) return { source: "demo" as const, organizationName: "Demo Organization", members: [], branding: null };
-  const [{ data: org }, { data: members }] = await Promise.all([
+  const [{ data: orgData }, { data: membersData }] = await Promise.all([
     supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
     supabase.from("memberships").select("role, user_id").eq("organization_id", organizationId).order("created_at", { ascending: true })
   ]);
+  const org = orgData as Pick<Database["public"]["Tables"]["organizations"]["Row"], "name"> | null;
+  const members = (membersData ?? []) as Array<Pick<Database["public"]["Tables"]["memberships"]["Row"], "user_id" | "role">>;
+
   return {
     source: "supabase" as const,
     organizationName: org?.name ?? "Not found",
-    members: (members ?? []).map((m) => ({ userId: m.user_id, role: m.role })),
+    members: members.map((m) => ({ userId: m.user_id, role: m.role })),
     branding: null
   };
 }
@@ -217,12 +221,15 @@ export async function getPublicSpaceBySlug(slug: string) {
   }
 
   const supabase = createAdminClient();
-  const { data: space } = await supabase
+  const { data: spaceData } = await supabase
     .from("spaces")
     .select("id, name, description, landing_page, visibility, public_slug")
     .eq("visibility", "public")
     .eq("public_slug", slug)
     .maybeSingle();
+
+  type PublicSpaceRow = Pick<Database["public"]["Tables"]["spaces"]["Row"], "id" | "name" | "description" | "landing_page" | "visibility" | "public_slug">;
+  const space = spaceData as PublicSpaceRow | null;
 
   if (!space) return null;
 

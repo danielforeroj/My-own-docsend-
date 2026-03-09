@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { updateSpaceLanding, updateSpaceVisibility } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/db/types";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -28,12 +29,18 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const { data: space } = await supabase
+  const { data: spaceData } = await supabase
     .from("spaces")
     .select("id, name, description, created_at, is_active, landing_page, visibility, public_slug, show_in_catalog, is_featured")
     .eq("id", params.id)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
+
+  type SpaceRow = Pick<
+    Database["public"]["Tables"]["spaces"]["Row"],
+    "id" | "name" | "description" | "created_at" | "is_active" | "landing_page" | "visibility" | "public_slug" | "show_in_catalog" | "is_featured"
+  >;
+  const space = spaceData as SpaceRow | null;
 
   if (!space) notFound();
 

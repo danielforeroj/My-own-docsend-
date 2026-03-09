@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getShareLinkByToken, getValidAccessGrant } from "@/lib/share";
+import type { Database } from "@/lib/db/types";
 
 export async function GET(request: Request, { params }: { params: { token: string; documentId: string } }) {
   const link = await getShareLinkByToken(params.token);
@@ -15,14 +17,17 @@ export async function GET(request: Request, { params }: { params: { token: strin
     return NextResponse.redirect(new URL(`/s/${params.token}`, request.url));
   }
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient() as any;
 
-  const { data: document } = await supabase
+  const { data: documentData } = await supabase
     .from("documents")
     .select("id, storage_path")
     .eq("id", params.documentId)
     .eq("organization_id", link.organization_id)
     .maybeSingle();
+
+  type DocumentRow = Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "storage_path">;
+  const document = documentData as DocumentRow | null;
 
   if (!document) {
     return new NextResponse("Document not found", { status: 404 });
@@ -33,12 +38,14 @@ export async function GET(request: Request, { params }: { params: { token: strin
   }
 
   if (link.link_type === "space" && link.space_id) {
-    const { data: join } = await supabase
+    const { data: joinData } = await supabase
       .from("space_documents")
       .select("id")
       .eq("space_id", link.space_id)
       .eq("document_id", document.id)
       .maybeSingle();
+
+    const join = joinData as Pick<Database["public"]["Tables"]["space_documents"]["Row"], "id"> | null;
 
     if (!join) {
       return new NextResponse("Forbidden", { status: 403 });

@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { updateSpace } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/db/types";
 
 export default async function EditSpacePage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const [{ data: space }, { data: documents }, { data: selected }] = await Promise.all([
+  const [{ data: spaceData }, { data: documentsData }, { data: selectedData }] = await Promise.all([
     supabase
       .from("spaces")
       .select("id, name, description, is_active")
@@ -18,6 +19,14 @@ export default async function EditSpacePage({ params }: { params: { id: string }
     supabase.from("documents").select("id, title").eq("organization_id", ctx.organizationId),
     supabase.from("space_documents").select("document_id").eq("space_id", params.id)
   ]);
+
+  type SpaceRow = Pick<Database["public"]["Tables"]["spaces"]["Row"], "id" | "name" | "description" | "is_active">;
+  type DocumentRow = Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">;
+  type SpaceDocumentRow = Pick<Database["public"]["Tables"]["space_documents"]["Row"], "document_id">;
+
+  const space = spaceData as SpaceRow | null;
+  const documents = (documentsData ?? []) as DocumentRow[];
+  const selected = (selectedData ?? []) as SpaceDocumentRow[];
 
   if (!space) notFound();
 

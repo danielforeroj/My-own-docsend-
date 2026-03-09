@@ -4,6 +4,7 @@ import { updateDocumentLanding, updateDocumentVisibility } from "@/app/admin/act
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/db/types";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -29,20 +30,28 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const { data: document } = await supabase
+  const { data: documentData } = await supabase
     .from("documents")
     .select("id, title, created_at, storage_path, landing_page, visibility, public_slug, show_in_catalog, is_featured")
     .eq("id", params.id)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
 
+  type DocumentRow = Pick<
+    Database["public"]["Tables"]["documents"]["Row"],
+    "id" | "title" | "created_at" | "storage_path" | "landing_page" | "visibility" | "public_slug" | "show_in_catalog" | "is_featured"
+  >;
+  const document = documentData as DocumentRow | null;
+
   if (!document) notFound();
 
-  const [{ count: viewsCount }, { count: downloadsCount }, { data: spaces }] = await Promise.all([
+  const [{ count: viewsCount }, { count: downloadsCount }, { data: spacesData }] = await Promise.all([
     supabase.from("view_sessions").select("id", { count: "exact", head: true }).eq("document_id", document.id),
     supabase.from("downloads").select("id", { count: "exact", head: true }).eq("document_id", document.id),
     supabase.from("space_documents").select("spaces (id, name)").eq("document_id", document.id)
   ]);
+
+  const spaces = (spacesData ?? []) as Array<{ spaces: { id: string; name: string } | null }>;
 
   const adminSupabase = createAdminClient();
   const { data: signed } = await adminSupabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 30);

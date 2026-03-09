@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createHash } from "crypto";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -7,16 +8,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getShareLinkByToken, getValidAccessGrant, ShareField } from "@/lib/share";
 import { getPublicShareByToken, shouldUseDemoData } from "@/lib/data/repository";
 import { PublicShell, type LandingConfig } from "@/components/public/public-shell";
+import type { Database } from "@/lib/db/types";
 
 async function getFields(shareLinkId: string): Promise<ShareField[]> {
-  const supabase = createAdminClient();
-  const { data } = await supabase
+  const supabase = createAdminClient() as any;
+  const { data: fieldRows } = await supabase
     .from("share_link_fields")
     .select("id, field_name, label, field_type, is_required, options, placeholder, position, help_text, default_value, width, validation_rule")
     .eq("share_link_id", shareLinkId)
     .order("position");
 
-  return (data ?? []).map((row) => ({
+  type ShareLinkFieldRow = Database["public"]["Tables"]["share_link_fields"]["Row"];
+  const data = (fieldRows ?? []) as ShareLinkFieldRow[];
+
+  return data.map((row) => ({
     ...row,
     options: Array.isArray(row.options) ? (row.options as string[]) : null
   })) as ShareField[];
@@ -62,7 +67,7 @@ function FieldRenderer({ field }: { field: ShareField & { help_text?: string | n
 }
 
 async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: { linkId: string; documentId: string | null; spaceId: string | null; visitorSubmissionId: string | null }) {
-  const supabase = createAdminClient();
+  const supabase = createAdminClient() as any;
   const headerStore = await headers();
   const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const userAgent = headerStore.get("user-agent") || "unknown";
@@ -127,13 +132,15 @@ export default async function PublicSharePage({ params, searchParams }: { params
 
     notFound();
   }
-  const link = await getShareLinkByToken(params.token);
+  const linkData = await getShareLinkByToken(params.token);
+  type ShareLinkRow = Database["public"]["Tables"]["share_links"]["Row"];
+  const link = linkData as ShareLinkRow | null;
   if (!link) notFound();
 
   const [accessGrant, fields] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
   const intakeSettings = (link.intake_settings ?? {}) as Record<string, string | null>;
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient() as any;
 
   if (link.requires_intake && !accessGrant) {
     const action = submitIntake.bind(null, params.token);
@@ -173,12 +180,14 @@ export default async function PublicSharePage({ params, searchParams }: { params
   }
 
   if (link.link_type === "document" && link.document_id) {
-    const { data: document } = await supabase
+    const { data: documentData } = await supabase
       .from("documents")
       .select("id, title, storage_path, landing_page")
       .eq("id", link.document_id)
       .eq("organization_id", link.organization_id)
       .maybeSingle();
+
+    const document = documentData as Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title" | "storage_path" | "landing_page"> | null;
 
     if (!document) notFound();
 
@@ -212,14 +221,16 @@ export default async function PublicSharePage({ params, searchParams }: { params
   }
 
   if (link.link_type === "space" && link.space_id) {
-    const [{ data: space }, { data: docs }] = await Promise.all([
+    const [{ data: spaceData }, { data: docsData }] = await Promise.all([
       supabase.from("spaces").select("id, name, description, landing_page").eq("id", link.space_id).eq("organization_id", link.organization_id).maybeSingle(),
       supabase.from("space_documents").select("position, documents (id, title)").eq("space_id", link.space_id).order("position")
     ]);
 
+    const space = spaceData as Pick<Database["public"]["Tables"]["spaces"]["Row"], "id" | "name" | "description" | "landing_page"> | null;
     if (!space) notFound();
 
-    const docRows = ((docs ?? []) as Array<{ documents: { id: string; title: string } | null }>).map((row) => row.documents);
+    const docs = (docsData ?? []) as Array<{ documents: { id: string; title: string } | null }>;
+    const docRows = docs.map((row) => row.documents);
 
     await trackView({
       linkId: link.id,

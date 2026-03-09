@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAdminContextOrNull } from "@/lib/auth/server";
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Uploaded file must be a PDF." }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = (await createClient()) as any;
     const { error: insertError } = await supabase.from("documents").insert({
       organization_id: ctx.organizationId,
       uploaded_by: ctx.userId,

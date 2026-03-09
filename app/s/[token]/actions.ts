@@ -1,5 +1,7 @@
 "use server";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createHash, randomUUID } from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -15,7 +17,7 @@ export async function submitIntake(token: string, formData: FormData) {
   const link = await getShareLinkByToken(token);
   if (!link) throw new Error("Invalid or expired share link.");
 
-  const supabase = createAdminClient();
+  const supabase = createAdminClient() as any;
 
   const { data: fields } = await supabase
     .from("share_link_fields")
