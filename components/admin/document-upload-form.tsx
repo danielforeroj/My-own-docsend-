@@ -100,7 +100,7 @@ export function DocumentUploadForm() {
       {state.success ? <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">{state.success}</p> : null}
 
       <button className="btn-primary" type="submit" disabled={state.loading}>
-        {state.loading ? "Uploading…" : "Upload"}
+        {state.loading ? <><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />Uploading…</> : "Upload"}
       </button>
     </form>
   );

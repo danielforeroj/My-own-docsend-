@@ -4,6 +4,7 @@ import { updateSpace } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export default async function EditSpacePage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
@@ -88,9 +89,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
           )}
         </div>
 
-        <button className="btn-primary" type="submit">
-          Save changes
-        </button>
+        <SubmitButton className="btn-primary" idleLabel="Save changes" pendingLabel="Saving changes..." />
       </form>
     </div>
   );

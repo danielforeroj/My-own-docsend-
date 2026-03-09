@@ -19,20 +19,22 @@ export default async function SpacesPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Slug</th><th className="px-4 py-3">Visibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
-          <tbody>
-            {spaces.map((space: { id: string; name: string; slug: string; is_active: boolean; visibility?: string }) => (
-              <tr key={space.id} className="border-b border-border last:border-b-0">
-                <td className="px-4 py-3"><Link className="font-medium hover:underline" href={`/admin/spaces/${space.id}`}>{space.name}</Link></td>
-                <td className="px-4 py-3 text-muted-foreground">{space.slug}</td>
-                <td className="px-4 py-3 text-muted-foreground">{space.visibility ?? "private"}</td>
-                <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{space.is_active ? "Active" : "Inactive"}</span></td>
-                <td className="px-4 py-3"><Link className="btn-inline" href={`/admin/spaces/${space.id}/edit`}>Edit</Link></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full text-left text-sm">
+            <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Slug</th><th className="px-4 py-3">Visibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
+            <tbody>
+              {spaces.map((space: { id: string; name: string; slug: string; is_active: boolean; visibility?: string }) => (
+                <tr key={space.id} className="border-b border-border last:border-b-0">
+                  <td className="px-4 py-3"><Link className="font-medium hover:underline" href={`/admin/spaces/${space.id}`}>{space.name}</Link></td>
+                  <td className="px-4 py-3 text-muted-foreground">{space.slug}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{space.visibility ?? "private"}</td>
+                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{space.is_active ? "Active" : "Inactive"}</span></td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap justify-end gap-2"><Link className="btn-inline" href={`/admin/spaces/${space.id}/edit`}>Edit</Link></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { createSpace } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export default async function NewSpacePage() {
   const ctx = await requireAdminContext();
@@ -45,9 +46,7 @@ export default async function NewSpacePage() {
           </div>
         </div>
 
-        <button className="btn-primary" type="submit">
-          Create space
-        </button>
+        <SubmitButton className="btn-primary" idleLabel="Create space" pendingLabel="Creating space..." />
       </form>
     </div>
   );

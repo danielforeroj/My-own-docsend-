@@ -71,7 +71,7 @@ export default function AdminLoginPage() {
 
         <div className="space-y-3 pt-1">
           <button className="btn-primary w-full" disabled={pending || !supabaseReady}>
-            {pending ? "Signing in..." : "Sign in to admin"}
+            {pending ? <><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />Signing in...</> : "Sign in to admin"}
           </button>
 
           {demoMode ? (

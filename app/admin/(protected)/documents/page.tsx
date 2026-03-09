@@ -37,32 +37,34 @@ export default async function DocumentsPage() {
       ) : null}
 
       <div className="card overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-background text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Size</th>
-              <th className="px-4 py-3">Visibility</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.map((document: { id: string; title: string; file_size?: number | null; created_at: string; visibility?: string }) => (
-              <tr key={document.id} className="border-b border-border last:border-b-0">
-                <td className="px-4 py-3"><Link className="font-medium hover:underline" href={`/admin/documents/${document.id}`}>{document.title}</Link></td>
-                <td className="px-4 py-3 text-muted-foreground">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{document.visibility ?? "private"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                  <Link className="btn-inline" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create link</Link>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full text-left text-sm">
+            <thead className="border-b border-border bg-background text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Title</th>
+                <th className="px-4 py-3">Size</th>
+                <th className="px-4 py-3">Visibility</th>
+                <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {documents.map((document: { id: string; title: string; file_size?: number | null; created_at: string; visibility?: string }) => (
+                <tr key={document.id} className="border-b border-border last:border-b-0">
+                  <td className="px-4 py-3"><Link className="font-medium hover:underline" href={`/admin/documents/${document.id}`}>{document.title}</Link></td>
+                  <td className="px-4 py-3 text-muted-foreground">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{document.visibility ?? "private"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Link className="btn-inline" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create link</Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

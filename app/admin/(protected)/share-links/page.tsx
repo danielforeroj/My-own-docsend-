@@ -16,25 +16,27 @@ export default async function ShareLinksPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Intake</th><th className="px-4 py-3">Public URL</th><th className="px-4 py-3">Actions</th></tr></thead>
-          <tbody>
-            {links.map((link: { id: string; token: string; name: string | null; link_type: string; requires_intake: boolean }) => (
-              <tr key={link.id} className="border-b border-border last:border-b-0">
-                <td className="px-4 py-3 font-medium">{link.name || "Untitled link"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{link.link_type}</td>
-                <td className="px-4 py-3 text-muted-foreground">{link.requires_intake ? "Required" : "Disabled"}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">/s/{link.token}</td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                  <Link className="btn-inline" href={`/admin/share-links/${link.id}`}>Configure</Link>
-                  <Link className="btn-inline" href={`/s/${link.token}`} target="_blank">Open</Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="min-w-[760px] w-full text-left text-sm">
+            <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Intake</th><th className="px-4 py-3">Public URL</th><th className="px-4 py-3">Actions</th></tr></thead>
+            <tbody>
+              {links.map((link: { id: string; token: string; name: string | null; link_type: string; requires_intake: boolean }) => (
+                <tr key={link.id} className="border-b border-border last:border-b-0">
+                  <td className="px-4 py-3 font-medium">{link.name || "Untitled link"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{link.link_type}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{link.requires_intake ? "Required" : "Disabled"}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">/s/{link.token}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Link className="btn-inline" href={`/admin/share-links/${link.id}`}>Configure</Link>
+                      <Link className="btn-inline" href={`/s/${link.token}`} target="_blank">Open</Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
