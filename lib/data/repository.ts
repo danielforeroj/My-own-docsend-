@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClientOrNull } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 import { mockAnalyticsSummary, mockBrandingSettings, mockDocuments, mockShareLinks, mockSpaces } from "@/lib/data/mock";
 
@@ -43,13 +44,13 @@ export async function getDocumentsData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility }))
+      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured }))
     };
   }
 
   const supabase = await createClientOrNull();
   if (!supabase) return { source: "demo" as const, documents: [] };
-  const { data } = await supabase.from("documents").select("id, title, file_size, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false });
+  const { data } = await supabase.from("documents").select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured").eq("organization_id", organizationId).order("created_at", { ascending: false });
   return { source: "supabase" as const, documents: data ?? [] };
 }
 
@@ -57,12 +58,12 @@ export async function getSpacesData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      spaces: mockSpaces.map((s) => ({ id: s.id, name: s.name, slug: s.slug, is_active: s.isActive, created_at: s.createdAt, visibility: s.visibility }))
+      spaces: mockSpaces.map((s) => ({ id: s.id, name: s.name, slug: s.slug, is_active: s.isActive, created_at: s.createdAt, visibility: s.visibility, public_slug: s.publicSlug, show_in_catalog: s.showInCatalog, is_featured: s.isFeatured }))
     };
   }
   const supabase = await createClientOrNull();
   if (!supabase) return { source: "demo" as const, spaces: [] };
-  const { data } = await supabase.from("spaces").select("id, name, slug, is_active, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false });
+  const { data } = await supabase.from("spaces").select("id, name, slug, is_active, created_at, visibility, public_slug, show_in_catalog, is_featured").eq("organization_id", organizationId).order("created_at", { ascending: false });
   return { source: "supabase" as const, spaces: data ?? [] };
 }
 
@@ -138,4 +139,53 @@ export function getPublicShareByToken(token: string) {
   const documents = space ? mockDocuments.filter((doc) => space.documentIds.includes(doc.id)) : [];
 
   return { link, document, space, documents };
+}
+
+
+export async function getPublicDocumentBySlug(slug: string) {
+  if (shouldUseDemoData()) {
+    return mockDocuments.find((doc) => doc.visibility === "public" && doc.publicSlug === slug) ?? null;
+  }
+
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("documents")
+    .select("id, title, landing_page, visibility, public_slug")
+    .eq("visibility", "public")
+    .eq("public_slug", slug)
+    .maybeSingle();
+
+  return data;
+}
+
+export async function getPublicSpaceBySlug(slug: string) {
+  if (shouldUseDemoData()) {
+    const space = mockSpaces.find((item) => item.visibility === "public" && item.publicSlug === slug);
+    if (!space) return null;
+    const docs = mockDocuments.filter((doc) => space.documentIds.includes(doc.id));
+    return { ...space, documents: docs };
+  }
+
+  const supabase = createAdminClient();
+  const { data: space } = await supabase
+    .from("spaces")
+    .select("id, name, description, landing_page, visibility, public_slug")
+    .eq("visibility", "public")
+    .eq("public_slug", slug)
+    .maybeSingle();
+
+  if (!space) return null;
+
+  const { data: docs } = await supabase
+    .from("space_documents")
+    .select("position, documents (id, title, visibility)")
+    .eq("space_id", (space as { id: string }).id)
+    .order("position");
+
+  const mappedDocs = (docs ?? []) as Array<{ documents: { id: string; title: string; visibility: "public" | "private" } | null }>;
+
+  return {
+    ...space,
+    documents: mappedDocs.map((row) => row.documents).filter((row): row is { id: string; title: string; visibility: "public" | "private" } => Boolean(row))
+  };
 }

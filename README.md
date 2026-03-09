@@ -9,6 +9,7 @@ DocSend-style internal sharing app built with **Next.js App Router + TypeScript 
 - **Public share pages**: `/s/:token`
   - Supports document links and space links.
   - Optional intake gate with custom fields.
+- Public slug routes: `/docs/[slug]`, `/spaces/[slug]` (for public visibility items).
 - **Storage**: Supabase Storage bucket `documents` (private).
   - PDFs upload directly from browser to Storage using short-lived signed upload URL.
 - **DB**: Supabase Postgres tables for organizations, docs, spaces, share links, intake submissions, views/downloads.

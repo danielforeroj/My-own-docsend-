@@ -5,6 +5,9 @@ export type MockDocument = {
   createdAt: string;
   storagePath: string;
   visibility: "public" | "private";
+  publicSlug: string | null;
+  showInCatalog: boolean;
+  isFeatured: boolean;
   landingPage?: Record<string, unknown>;
 };
 
@@ -16,6 +19,9 @@ export type MockSpace = {
   createdAt: string;
   description: string;
   visibility: "public" | "private";
+  publicSlug: string | null;
+  showInCatalog: boolean;
+  isFeatured: boolean;
   documentIds: string[];
   landingPage?: Record<string, unknown>;
 };
@@ -39,6 +45,9 @@ export const mockDocuments: MockDocument[] = [
     createdAt: "2026-01-05T10:30:00.000Z",
     storagePath: "demo/q2-client-proposal.pdf",
     visibility: "private",
+    publicSlug: null,
+    showInCatalog: false,
+    isFeatured: false,
     landingPage: { page_title: "Q2 Client Proposal", short_description: "Executive proposal deck for Q2 planning." }
   },
   {
@@ -48,6 +57,9 @@ export const mockDocuments: MockDocument[] = [
     createdAt: "2026-01-03T14:12:00.000Z",
     storagePath: "demo/product-one-pager.pdf",
     visibility: "public",
+    publicSlug: "product-one-pager",
+    showInCatalog: true,
+    isFeatured: true,
     landingPage: { page_title: "Product One-Pager", short_description: "Public collateral for partner handoff." }
   }
 ];
@@ -61,6 +73,9 @@ export const mockSpaces: MockSpace[] = [
     createdAt: "2026-01-04T09:00:00.000Z",
     description: "Everything Acme needs to review onboarding docs.",
     visibility: "private",
+    publicSlug: null,
+    showInCatalog: false,
+    isFeatured: false,
     documentIds: ["doc-demo-1", "doc-demo-2"],
     landingPage: { page_title: "Acme Onboarding Space", short_description: "Welcome to your onboarding room." }
   },
@@ -72,6 +87,9 @@ export const mockSpaces: MockSpace[] = [
     createdAt: "2025-12-29T16:45:00.000Z",
     description: "Public shareable partner collateral.",
     visibility: "public",
+    publicSlug: "partner-kit",
+    showInCatalog: true,
+    isFeatured: true,
     documentIds: ["doc-demo-2"],
     landingPage: { page_title: "Partner Kit", short_description: "Public materials for partner introductions." }
   }
