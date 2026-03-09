@@ -17,7 +17,7 @@ export default async function ShareLinksPage() {
 
       <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Intake</th><th className="px-4 py-3">Public URL</th><th className="px-4 py-3 text-right">Actions</th></tr></thead>
+          <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Intake</th><th className="px-4 py-3">Public URL</th><th className="px-4 py-3">Actions</th></tr></thead>
           <tbody>
             {links.map((link: { id: string; token: string; name: string | null; link_type: string; requires_intake: boolean }) => (
               <tr key={link.id} className="border-b border-border last:border-b-0">
@@ -25,9 +25,11 @@ export default async function ShareLinksPage() {
                 <td className="px-4 py-3 text-muted-foreground">{link.link_type}</td>
                 <td className="px-4 py-3 text-muted-foreground">{link.requires_intake ? "Required" : "Disabled"}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">/s/{link.token}</td>
-                <td className="space-x-2 px-4 py-3 text-right">
-                  <Link className="btn-secondary inline-flex" href={`/admin/share-links/${link.id}`}>Configure</Link>
-                  <Link className="btn-secondary inline-flex" href={`/s/${link.token}`} target="_blank">Open</Link>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
+                  <Link className="btn-inline" href={`/admin/share-links/${link.id}`}>Configure</Link>
+                  <Link className="btn-inline" href={`/s/${link.token}`} target="_blank">Open</Link>
+                  </div>
                 </td>
               </tr>
             ))}
