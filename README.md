@@ -33,6 +33,13 @@ Notes:
 - Middleware will not hard-block `/admin` in demo mode.
 - Admin auth/data features still require Supabase and are not mocked in this PR.
 
+Demo preview behavior:
+
+- Read-only pages render from built-in mock repository data (documents, spaces, share links, analytics, settings, and public share pages).
+- Mutating actions are disabled/no-op in demo mode so UI flows do not crash.
+- Demo share links available out of the box: `/s/demo-document` and `/s/demo-space`.
+
+
 ### Connected mode (full Supabase runtime)
 
 Use connected mode for real auth/data behavior.

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createClientOrNull } from "@/lib/supabase/browser";
-import { isSupabaseConfigured } from "@/lib/runtime";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
@@ -12,6 +12,7 @@ export default function AdminLoginPage() {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const supabaseReady = isSupabaseConfigured();
+  const demoMode = isDemoMode() || !supabaseReady;
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -72,6 +73,19 @@ export default function AdminLoginPage() {
         <button className="btn-primary w-full" disabled={pending || !supabaseReady}>
           {pending ? "Signing in..." : "Sign in"}
         </button>
+
+        {demoMode ? (
+          <button
+            type="button"
+            className="btn-secondary w-full"
+            onClick={() => {
+              router.push("/admin");
+              router.refresh();
+            }}
+          >
+            Enter admin preview (Demo mode)
+          </button>
+        ) : null}
       </form>
     </main>
   );
