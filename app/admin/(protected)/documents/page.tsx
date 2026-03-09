@@ -4,7 +4,7 @@ import { getDocumentsData } from "@/lib/data/repository";
 
 export default async function DocumentsPage() {
   const ctx = await requireAdminContext();
-  const { source, documents } = await getDocumentsData(ctx.organizationId);
+  const { source, documents, error } = await getDocumentsData(ctx.organizationId);
 
   return (
     <div className="space-y-6">
@@ -17,6 +17,24 @@ export default async function DocumentsPage() {
         </div>
         {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">Upload PDF (Demo mode)</span> : <Link href="/admin/documents/new" className="btn-primary inline-flex items-center justify-center">Upload PDF</Link>}
       </div>
+
+      {error ? (
+        <section className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+          <h2 className="font-semibold text-red-300">Could not load documents from Supabase</h2>
+          <p className="mt-1 text-sm text-red-200">The documents query failed. Check database schema/permissions and server env configuration.</p>
+          <p className="mt-2 text-xs text-red-200/90">Details: {error}</p>
+        </section>
+      ) : null}
+
+      {!error && source === "supabase" && documents.length === 0 ? (
+        <section className="card p-4">
+          <h2 className="font-semibold">No documents yet</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Upload your first PDF to see it here and assign it to spaces.</p>
+          <div className="mt-3">
+            <Link href="/admin/documents/new" className="btn-primary inline-flex items-center">Upload your first PDF</Link>
+          </div>
+        </section>
+      ) : null}
 
       <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
