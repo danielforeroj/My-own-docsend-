@@ -5,6 +5,7 @@ import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -30,7 +31,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const { data: documentData } = await supabase
+  const { data: documentData, error: documentError } = await supabase
     .from("documents")
     .select("id, title, created_at, storage_path, landing_page, visibility, public_slug, show_in_catalog, is_featured")
     .eq("id", params.id)
@@ -43,9 +44,27 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   >;
   const document = documentData as DocumentRow | null;
 
+  if (documentError) {
+    return (
+      <div className="space-y-4">
+        <Link href="/admin/documents" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to documents
+        </Link>
+        <section className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+          <h1 className="text-xl font-semibold text-red-300">Could not load document details</h1>
+          <p className="mt-2 text-sm text-red-200">Supabase returned an error while loading this document.</p>
+          <p className="mt-2 text-xs text-red-200/90">
+            Details: {documentError.message}
+            {documentError.code ? ` (code: ${documentError.code})` : ""}
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   if (!document) notFound();
 
-  const [{ count: viewsCount }, { count: downloadsCount }, { data: spacesData }] = await Promise.all([
+  const [{ count: viewsCount, error: viewsError }, { count: downloadsCount, error: downloadsError }, { data: spacesData, error: spacesError }] = await Promise.all([
     supabase.from("view_sessions").select("id", { count: "exact", head: true }).eq("document_id", document.id),
     supabase.from("downloads").select("id", { count: "exact", head: true }).eq("document_id", document.id),
     supabase.from("space_documents").select("spaces (id, name)").eq("document_id", document.id)
@@ -69,11 +88,18 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="card p-4"><p className="stat-label">Total views</p><p className="stat-value">{viewsCount ?? 0}</p></div>
-        <div className="card p-4"><p className="stat-label">Total downloads</p><p className="stat-value">{downloadsCount ?? 0}</p></div>
+        <div className="card p-4"><p className="stat-label">Total views</p><p className="stat-value">{viewsError ? "—" : viewsCount ?? 0}</p></div>
+        <div className="card p-4"><p className="stat-label">Total downloads</p><p className="stat-value">{downloadsError ? "—" : downloadsCount ?? 0}</p></div>
         <div className="card p-4"><p className="stat-label">Created</p><p className="text-sm font-medium">{new Date(document.created_at).toLocaleString()}</p></div>
       </div>
 
+      {viewsError || downloadsError ? (
+        <section className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <p className="font-semibold text-red-300">Analytics could not be fully loaded.</p>
+          {viewsError ? <p className="mt-1">Views query: {viewsError.message}</p> : null}
+          {downloadsError ? <p className="mt-1">Downloads query: {downloadsError.message}</p> : null}
+        </section>
+      ) : null}
 
       <section className="card p-5">
         <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
@@ -92,7 +118,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
-          <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save visibility</button></div>
+          <div className="md:col-span-2 flex justify-end"><SubmitButton className="btn-primary" idleLabel="Save visibility" pendingLabel="Saving visibility..." /></div>
         </form>
       </section>
 
@@ -120,18 +146,31 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
             <label className="flex items-center gap-2"><input type="checkbox" name="landing_show_highlights" defaultChecked={landing.show_highlights ?? false} /> Show highlights</label>
           </div>
 
-          <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save landing config</button></div>
+          <div className="md:col-span-2 flex justify-end"><SubmitButton className="btn-primary" idleLabel="Save landing config" pendingLabel="Saving landing config..." /></div>
         </form>
       </section>
 
       <section className="card p-4">
-        <h2 className="mb-2 font-semibold">Included in Spaces</h2>
-        {(spaces ?? []).map((row, i) => (
-          <div className="text-sm" key={`${row.spaces?.id ?? "none"}-${i}`}>
-            {row.spaces ? <Link className="underline" href={`/admin/spaces/${row.spaces.id}`}>{row.spaces.name}</Link> : "Unknown space"}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">Included in Spaces</h2>
+          <Link href="/admin/spaces" className="btn-secondary">Add to a space</Link>
+        </div>
+
+        {spacesError ? (
+          <div className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">
+            Could not load space assignments: {spacesError.message}
           </div>
-        ))}
-        {!spaces?.length ? <p className="text-sm text-muted-foreground">Not in any space yet.</p> : null}
+        ) : (
+          <>
+            {(spaces ?? []).map((row, i) => (
+              <div className="flex items-center justify-between gap-3 text-sm" key={`${row.spaces?.id ?? "none"}-${i}`}>
+                <span>{row.spaces ? <Link className="underline" href={`/admin/spaces/${row.spaces.id}`}>{row.spaces.name}</Link> : "Unknown space"}</span>
+                {row.spaces ? <Link className="text-xs text-muted-foreground underline" href={`/admin/spaces/${row.spaces.id}/edit`}>Manage documents in space</Link> : null}
+              </div>
+            ))}
+            {!spaces?.length ? <p className="text-sm text-muted-foreground">Not in any space yet. Use <span className="font-medium">Add to a space</span> to assign it.</p> : null}
+          </>
+        )}
       </section>
 
       {signed?.signedUrl ? (

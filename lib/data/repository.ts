@@ -45,14 +45,31 @@ export async function getDocumentsData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured }))
+      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured })),
+      error: null as string | null
     };
   }
 
   const supabase = await createClientOrNull();
-  if (!supabase) return { source: "demo" as const, documents: [] };
-  const { data } = await supabase.from("documents").select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured").eq("organization_id", organizationId).order("created_at", { ascending: false });
-  return { source: "supabase" as const, documents: data ?? [] };
+  if (!supabase) {
+    return {
+      source: "supabase" as const,
+      documents: [],
+      error: "Supabase is configured but the server client could not be initialized."
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  return {
+    source: "supabase" as const,
+    documents: data ?? [],
+    error: error ? `${error.message}${error.code ? ` (code: ${error.code})` : ""}` : null
+  };
 }
 
 export async function getSpacesData(organizationId: string) {

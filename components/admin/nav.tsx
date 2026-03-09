@@ -12,13 +12,18 @@ const links = [
   { href: "/admin/settings", label: "Settings" }
 ];
 
+function isActiveRoute(pathname: string, href: string) {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AdminNav() {
   const pathname = usePathname();
 
   return (
     <nav className="space-y-1">
       {links.map((link) => {
-        const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const active = isActiveRoute(pathname, link.href);
         return (
           <Link
             key={link.href}
