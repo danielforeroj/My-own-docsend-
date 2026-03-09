@@ -130,6 +130,57 @@ export async function getSettingsData(organizationId: string) {
   };
 }
 
+export async function getPublicCatalogData() {
+  if (shouldUseDemoData()) {
+    const publicDocuments = mockDocuments
+      .filter((doc) => doc.visibility === "public" && doc.showInCatalog && doc.publicSlug)
+      .map((doc) => ({ id: doc.id, title: doc.title, public_slug: doc.publicSlug!, is_featured: doc.isFeatured, created_at: doc.createdAt }));
+
+    const publicSpaces = mockSpaces
+      .filter((space) => space.visibility === "public" && space.showInCatalog && space.publicSlug)
+      .map((space) => ({ id: space.id, name: space.name, description: space.description, public_slug: space.publicSlug!, is_featured: space.isFeatured, created_at: space.createdAt }));
+
+    return {
+      source: "demo" as const,
+      documents: publicDocuments,
+      spaces: publicSpaces,
+      featuredDocuments: publicDocuments.filter((d) => d.is_featured),
+      featuredSpaces: publicSpaces.filter((s) => s.is_featured)
+    };
+  }
+
+  const supabase = createAdminClient();
+  const [{ data: documents }, { data: spaces }] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("id, title, public_slug, is_featured, created_at")
+      .eq("visibility", "public")
+      .eq("show_in_catalog", true)
+      .not("public_slug", "is", null)
+      .order("is_featured", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("spaces")
+      .select("id, name, description, public_slug, is_featured, created_at")
+      .eq("visibility", "public")
+      .eq("show_in_catalog", true)
+      .not("public_slug", "is", null)
+      .order("is_featured", { ascending: false })
+      .order("created_at", { ascending: false })
+  ]);
+
+  const safeDocuments = (documents ?? []).filter((doc) => Boolean((doc as { public_slug: string | null }).public_slug));
+  const safeSpaces = (spaces ?? []).filter((space) => Boolean((space as { public_slug: string | null }).public_slug));
+
+  return {
+    source: "supabase" as const,
+    documents: safeDocuments,
+    spaces: safeSpaces,
+    featuredDocuments: safeDocuments.filter((d) => (d as { is_featured: boolean }).is_featured),
+    featuredSpaces: safeSpaces.filter((s) => (s as { is_featured: boolean }).is_featured)
+  };
+}
+
 export function getPublicShareByToken(token: string) {
   const link = mockShareLinks.find((item) => item.token === token);
   if (!link) return null;
@@ -140,7 +191,6 @@ export function getPublicShareByToken(token: string) {
 
   return { link, document, space, documents };
 }
-
 
 export async function getPublicDocumentBySlug(slug: string) {
   if (shouldUseDemoData()) {
