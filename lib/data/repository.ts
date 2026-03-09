@@ -45,7 +45,7 @@ export async function getDocumentsData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured })),
+      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured, landing_page: d.landingPage ?? null })),
       error: null as string | null
     };
   }
@@ -61,7 +61,7 @@ export async function getDocumentsData(organizationId: string) {
 
   const { data, error } = await supabase
     .from("documents")
-    .select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured")
+    .select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured, landing_page")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
@@ -221,7 +221,7 @@ export async function getPublicDocumentBySlug(slug: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("documents")
-    .select("id, title, landing_page, visibility, public_slug")
+    .select("id, title, storage_path, landing_page, visibility, public_slug")
     .eq("visibility", "public")
     .eq("public_slug", slug)
     .maybeSingle();

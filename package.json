@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:viewer": "node scripts/viewer-integration.mjs",
+    "test:viewer:persistence": "node scripts/viewer-persistence-e2e.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
