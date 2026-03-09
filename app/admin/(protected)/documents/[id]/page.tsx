@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateDocumentLanding } from "@/app/admin/actions";
+import { updateDocumentLanding, updateDocumentVisibility } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/db/types";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -29,25 +30,34 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const { data: document } = await supabase
+  const { data: documentData } = await supabase
     .from("documents")
-    .select("id, title, created_at, storage_path, landing_page")
+    .select("id, title, created_at, storage_path, landing_page, visibility, public_slug, show_in_catalog, is_featured")
     .eq("id", params.id)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
 
+  type DocumentRow = Pick<
+    Database["public"]["Tables"]["documents"]["Row"],
+    "id" | "title" | "created_at" | "storage_path" | "landing_page" | "visibility" | "public_slug" | "show_in_catalog" | "is_featured"
+  >;
+  const document = documentData as DocumentRow | null;
+
   if (!document) notFound();
 
-  const [{ count: viewsCount }, { count: downloadsCount }, { data: spaces }] = await Promise.all([
+  const [{ count: viewsCount }, { count: downloadsCount }, { data: spacesData }] = await Promise.all([
     supabase.from("view_sessions").select("id", { count: "exact", head: true }).eq("document_id", document.id),
     supabase.from("downloads").select("id", { count: "exact", head: true }).eq("document_id", document.id),
     supabase.from("space_documents").select("spaces (id, name)").eq("document_id", document.id)
   ]);
 
+  const spaces = (spacesData ?? []) as Array<{ spaces: { id: string; name: string } | null }>;
+
   const adminSupabase = createAdminClient();
   const { data: signed } = await adminSupabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 30);
   const landing = ((document.landing_page ?? {}) as LandingConfig) || {};
   const action = updateDocumentLanding.bind(null, document.id);
+  const visibilityAction = updateDocumentVisibility.bind(null, document.id);
 
   return (
     <div className="space-y-8">
@@ -63,6 +73,28 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
         <div className="card p-4"><p className="stat-label">Total downloads</p><p className="stat-value">{downloadsCount ?? 0}</p></div>
         <div className="card p-4"><p className="stat-label">Created</p><p className="text-sm font-medium">{new Date(document.created_at).toLocaleString()}</p></div>
       </div>
+
+
+      <section className="card p-5">
+        <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog by slug. Private items stay hidden from catalog and can still be shared via private/share links.</p>
+        <form action={visibilityAction} className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="label">Visibility</label>
+            <select name="visibility" defaultValue={document.visibility} className="w-full">
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="label">Public slug (for /docs or /spaces route)</label>
+            <input name="public_slug" defaultValue={document.public_slug ?? ""} className="w-full" placeholder="my-public-document" />
+          </div>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
+          <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save visibility</button></div>
+        </form>
+      </section>
 
       <section className="card p-5">
         <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>

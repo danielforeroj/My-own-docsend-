@@ -70,6 +70,10 @@ export type Database = {
           storage_path: string;
           file_size: number | null;
           mime_type: string | null;
+          visibility: "public" | "private";
+          public_slug: string | null;
+          show_in_catalog: boolean;
+          is_featured: boolean;
           created_at: string;
           landing_page: Json;
         };
@@ -81,11 +85,19 @@ export type Database = {
           storage_path: string;
           file_size?: number | null;
           mime_type?: string | null;
+          visibility?: "public" | "private";
+          public_slug?: string | null;
+          show_in_catalog?: boolean;
+          is_featured?: boolean;
           created_at?: string;
           landing_page?: Json;
         };
         Update: {
           title?: string;
+          visibility?: "public" | "private";
+          public_slug?: string | null;
+          show_in_catalog?: boolean;
+          is_featured?: boolean;
           landing_page?: Json;
         };
       };
@@ -98,6 +110,10 @@ export type Database = {
           slug: string;
           description: string | null;
           is_active: boolean;
+          visibility: "public" | "private";
+          public_slug: string | null;
+          show_in_catalog: boolean;
+          is_featured: boolean;
           created_at: string;
           updated_at: string;
           landing_page: Json;
@@ -110,6 +126,10 @@ export type Database = {
           slug: string;
           description?: string | null;
           is_active?: boolean;
+          visibility?: "public" | "private";
+          public_slug?: string | null;
+          show_in_catalog?: boolean;
+          is_featured?: boolean;
           created_at?: string;
           updated_at?: string;
           landing_page?: Json;
@@ -119,6 +139,10 @@ export type Database = {
           slug?: string;
           description?: string | null;
           is_active?: boolean;
+          visibility?: "public" | "private";
+          public_slug?: string | null;
+          show_in_catalog?: boolean;
+          is_featured?: boolean;
           updated_at?: string;
           landing_page?: Json;
         };

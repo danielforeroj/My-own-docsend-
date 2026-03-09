@@ -2,16 +2,19 @@ import Link from "next/link";
 import { createSpace } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/db/types";
 
 export default async function NewSpacePage() {
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const { data: documents } = await supabase
+  const { data: documentRows } = await supabase
     .from("documents")
     .select("id, title")
     .eq("organization_id", ctx.organizationId)
     .order("created_at", { ascending: false });
+
+  const documents = (documentRows ?? []) as Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">>;
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -33,12 +36,12 @@ export default async function NewSpacePage() {
         <div className="space-y-2">
           <label className="block text-sm font-medium">Documents in this space</label>
           <div className="space-y-2">
-            {documents?.map((document) => (
+            {documents.map((document) => (
               <label key={document.id} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="document_ids" value={document.id} /> {document.title}
               </label>
             ))}
-            {!documents?.length ? <p className="text-sm text-slate-500">No documents uploaded yet.</p> : null}
+            {!documents.length ? <p className="text-sm text-slate-500">No documents uploaded yet.</p> : null}
           </div>
         </div>
 

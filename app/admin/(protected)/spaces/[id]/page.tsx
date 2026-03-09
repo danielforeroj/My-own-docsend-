@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateSpaceLanding } from "@/app/admin/actions";
+import { updateSpaceLanding, updateSpaceVisibility } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/db/types";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -28,12 +29,18 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
   const ctx = await requireAdminContext();
   const supabase = await createClient();
 
-  const { data: space } = await supabase
+  const { data: spaceData } = await supabase
     .from("spaces")
-    .select("id, name, description, created_at, is_active, landing_page")
+    .select("id, name, description, created_at, is_active, landing_page, visibility, public_slug, show_in_catalog, is_featured")
     .eq("id", params.id)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
+
+  type SpaceRow = Pick<
+    Database["public"]["Tables"]["spaces"]["Row"],
+    "id" | "name" | "description" | "created_at" | "is_active" | "landing_page" | "visibility" | "public_slug" | "show_in_catalog" | "is_featured"
+  >;
+  const space = spaceData as SpaceRow | null;
 
   if (!space) notFound();
 
@@ -49,6 +56,7 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
 
   const landing = ((space.landing_page ?? {}) as LandingConfig) || {};
   const action = updateSpaceLanding.bind(null, space.id);
+  const visibilityAction = updateSpaceVisibility.bind(null, space.id);
 
   return (
     <div className="space-y-8">
@@ -64,6 +72,28 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
         <div className="card p-4"><p className="stat-label">Captured submissions</p><p className="stat-value">{submissionsCount ?? 0}</p></div>
         <div className="card p-4"><p className="stat-label">Status</p><p className="text-sm font-medium">{space.is_active ? "Active" : "Inactive"}</p></div>
       </div>
+
+
+      <section className="card p-5">
+        <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog by slug. Private items stay hidden from catalog and can still be shared via private/share links.</p>
+        <form action={visibilityAction} className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="label">Visibility</label>
+            <select name="visibility" defaultValue={space.visibility} className="w-full">
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="label">Public slug (for /docs or /spaces route)</label>
+            <input name="public_slug" defaultValue={space.public_slug ?? ""} className="w-full" placeholder="my-public-space" />
+          </div>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={space.show_in_catalog} /> Show in homepage public catalog</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={space.is_featured} /> Featured</label>
+          <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save visibility</button></div>
+        </form>
+      </section>
 
       <section className="card p-5">
         <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>

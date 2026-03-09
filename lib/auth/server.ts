@@ -1,8 +1,9 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClientOrNull } from "@/lib/supabase/server";
 import type { AppRole } from "@/lib/db/types";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 
 export type AuthContext = {
   userId: string;
@@ -10,8 +11,16 @@ export type AuthContext = {
   role: AppRole;
 };
 
+const demoContext: AuthContext = {
+  userId: "demo-admin",
+  organizationId: "demo-org",
+  role: "super_admin"
+};
+
 async function getMembershipContext(userId: string): Promise<Omit<AuthContext, "userId"> | null> {
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return null;
+
   const { data: membership } = await supabase
     .from("memberships")
     .select("organization_id, role")
@@ -22,14 +31,22 @@ async function getMembershipContext(userId: string): Promise<Omit<AuthContext, "
 
   if (!membership) return null;
 
+  const row = membership as unknown as { organization_id: string; role: AppRole };
+
   return {
-    organizationId: membership.organization_id,
-    role: membership.role
+    organizationId: row.organization_id,
+    role: row.role
   };
 }
 
 export async function requireAdminContext(): Promise<AuthContext> {
-  const supabase = await createClient();
+  if (isDemoMode() || !isSupabaseConfigured()) {
+    return demoContext;
+  }
+
+  const supabase = await createClientOrNull();
+  if (!supabase) return demoContext;
+
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -51,7 +68,13 @@ export async function requireAdminContext(): Promise<AuthContext> {
 }
 
 export async function getAdminContextOrNull(): Promise<AuthContext | null> {
-  const supabase = await createClient();
+  if (isDemoMode() || !isSupabaseConfigured()) {
+    return demoContext;
+  }
+
+  const supabase = await createClientOrNull();
+  if (!supabase) return null;
+
   const {
     data: { user }
   } = await supabase.auth.getUser();
