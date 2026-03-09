@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { submitIntake } from "@/app/s/[token]/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getShareLinkByToken, getValidAccessGrant, ShareField } from "@/lib/share";
+import { getPublicShareByToken, shouldUseDemoData } from "@/lib/data/repository";
 
 async function getFields(shareLinkId: string): Promise<ShareField[]> {
   const supabase = createAdminClient();
@@ -192,6 +193,44 @@ async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: {
 }
 
 export default async function PublicSharePage({ params, searchParams }: { params: { token: string }; searchParams?: { submitted?: string } }) {
+  if (shouldUseDemoData()) {
+    const demo = getPublicShareByToken(params.token);
+    if (!demo) notFound();
+
+    if (demo.link.linkType === "document" && demo.document) {
+      return (
+        <PublicShell landing={(demo.document.landingPage ?? {}) as LandingConfig} title={demo.document.title}>
+          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
+            Demo mode: backend file preview and downloads are disabled.
+          </p>
+          <div className="rounded-xl border border-border bg-background p-6 text-sm text-muted-foreground">
+            Document preview placeholder for <span className="font-medium text-foreground">{demo.document.title}</span>.
+          </div>
+        </PublicShell>
+      );
+    }
+
+    if (demo.link.linkType === "space" && demo.space) {
+      return (
+        <PublicShell landing={(demo.space.landingPage ?? {}) as LandingConfig} title={demo.space.name} description={demo.space.description}>
+          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
+            Demo mode: intake submission and secure downloads are disabled.
+          </p>
+          <section className="space-y-3 rounded-xl border border-border bg-background p-4">
+            <h2 className="text-lg font-semibold">Documents in this Space</h2>
+            {demo.documents.map((doc) => (
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2" key={doc.id}>
+                <span className="font-medium">{doc.title}</span>
+                <span className="btn-secondary opacity-70">Open (Demo mode)</span>
+              </div>
+            ))}
+          </section>
+        </PublicShell>
+      );
+    }
+
+    notFound();
+  }
   const link = await getShareLinkByToken(params.token);
   if (!link) notFound();
 
