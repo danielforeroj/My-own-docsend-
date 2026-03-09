@@ -38,3 +38,12 @@ export function createClientOrNull() {
 
   return createBrowserClient<Database>(url, anonKey);
 }
+
+export function createClientOrNull() {
+  const url = getOptionalEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const anonKey = getOptionalEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+
+  if (!url || !anonKey) return null;
+
+  return createBrowserClient<Database>(url, anonKey);
+}
