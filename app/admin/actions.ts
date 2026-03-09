@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClientOrNull } from "@/lib/supabase/server";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
+
+
+function shouldDisableMutations() {
+  return isDemoMode() || !isSupabaseConfigured();
+}
 
 type AllowedFieldType = "text" | "email" | "phone" | "textarea" | "select" | "checkbox";
 const ALLOWED_FIELD_TYPES = new Set<AllowedFieldType>(["text", "email", "phone", "textarea", "select", "checkbox"]);
@@ -115,8 +121,14 @@ function parseLandingForm(formData: FormData) {
 }
 
 export async function createSpace(formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -151,8 +163,14 @@ export async function createSpace(formData: FormData) {
 }
 
 export async function updateSpace(spaceId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
   await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -181,8 +199,14 @@ export async function updateSpace(spaceId: string, formData: FormData) {
 }
 
 export async function createShareLink(formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/share-links");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return;
 
   const targetType = String(formData.get("target_type") || "");
   const targetId = String(formData.get("target_id") || "");
@@ -233,8 +257,14 @@ export async function createShareLink(formData: FormData) {
 }
 
 export async function updateShareLinkFields(shareLinkId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/share-links");
+    return;
+  }
+
   await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const requiresIntake = formData.get("requires_intake") === "on";
@@ -266,8 +296,14 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
 }
 
 export async function updateDocumentLanding(documentId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/documents");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
 
@@ -282,8 +318,14 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 }
 
 export async function updateSpaceLanding(spaceId: string, formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/spaces");
+    return;
+  }
+
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = await createClientOrNull();
+  if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
 
