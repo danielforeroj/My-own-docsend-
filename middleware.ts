@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { Database } from "@/lib/db/types";
+import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 
 const PUBLIC_ADMIN_PATHS = ["/admin/login"];
 
@@ -11,32 +12,32 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
-          });
-        }
+  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
+  const isPublicAdminPath = PUBLIC_ADMIN_PATHS.some((path) => request.nextUrl.pathname.startsWith(path));
+
+  if (!isSupabaseConfigured()) {
+    return response;
+  }
+
+  const supabase = createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }>) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          request.cookies.set(name, value);
+          response.cookies.set(name, value, options);
+        });
       }
     }
-  );
+  });
 
   const {
     data: { user }
   } = await supabase.auth.getUser();
 
-  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
-  const isPublicAdminPath = PUBLIC_ADMIN_PATHS.some((path) => request.nextUrl.pathname.startsWith(path));
-
-  if (isAdminPath && !isPublicAdminPath && !user) {
+  if (!isDemoMode() && isAdminPath && !isPublicAdminPath && !user) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
