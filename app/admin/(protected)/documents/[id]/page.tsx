@@ -138,6 +138,24 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
               className="w-full"
             />
           </div>
+          <div className="space-y-1">
+            <label className="label">Viewer mode</label>
+            <select name="viewer_mode" defaultValue={landing.viewer_mode ?? "document"} className="w-full">
+              <option value="document">Document (scroll)</option>
+              <option value="deck">Deck (slide-by-slide)</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="label">Viewer page count (for deck mode)</label>
+            <input
+              type="number"
+              min={1}
+              max={300}
+              name="viewer_page_count"
+              defaultValue={landing.viewer_page_count ?? 12}
+              className="w-full"
+            />
+          </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
           <FormFieldError state={state} name="public_slug" />
