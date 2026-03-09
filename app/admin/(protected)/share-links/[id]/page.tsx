@@ -5,6 +5,7 @@ import { IntakeFieldsEditor, type EditableField } from "@/components/admin/intak
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 export default async function ShareLinkSettingsPage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
@@ -107,9 +108,7 @@ export default async function ShareLinkSettingsPage({ params }: { params: { id: 
         <IntakeFieldsEditor initialFields={initialFields} />
 
         <div className="flex justify-end">
-          <button className="btn-primary" type="submit">
-            Save configuration
-          </button>
+          <SubmitButton className="btn-primary" idleLabel="Save configuration" pendingLabel="Saving configuration..." />
         </div>
       </form>
     </div>

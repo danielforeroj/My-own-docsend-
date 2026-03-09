@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 export type LandingConfig = {
@@ -30,9 +31,9 @@ export function PublicShell({ landing, title, description, children }: { landing
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6">
       <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-        {landing.hero_image_url && variant !== "minimal_header" ? <img src={landing.hero_image_url} alt="hero" className="h-52 w-full object-cover" /> : null}
+        {landing.hero_image_url && variant !== "minimal_header" ? <Image loader={({ src }) => src} unoptimized src={landing.hero_image_url} alt="hero" width={1600} height={420} className="h-52 w-full object-cover" /> : null}
         <div className="p-6 md:p-10">
-          {landing.logo_url ? <img src={landing.logo_url} alt="logo" className="mb-4 h-8 w-auto" /> : null}
+          {landing.logo_url ? <Image loader={({ src }) => src} unoptimized src={landing.logo_url} alt="logo" width={160} height={32} className="mb-4 h-8 w-auto" /> : null}
           {landing.eyebrow ? <p className="text-xs font-semibold uppercase tracking-wide text-primary">{landing.eyebrow}</p> : null}
           <h1 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">{heading}</h1>
           {body ? <p className="mt-3 max-w-3xl text-muted-foreground">{body}</p> : null}

@@ -51,9 +51,12 @@ function parseFieldRows(formData: FormData) {
     position: number;
   }> = [];
 
-  for (const index of Array.from({ length: 6 }, (_, i) => i)) {
-    const fieldName = String(formData.get(`field_${index}_name`) || "").trim();
-    const label = String(formData.get(`field_${index}_label`) || "").trim();
+  const fieldCountRaw = Number(formData.get("field_count") || 0);
+  const fieldCount = Number.isFinite(fieldCountRaw) ? Math.min(24, Math.max(0, Math.round(fieldCountRaw))) : 0;
+
+  for (const index of Array.from({ length: fieldCount }, (_, i) => i)) {
+    const fieldNameRaw = String(formData.get(`field_${index}_name`) || "").trim();
+    const labelRaw = String(formData.get(`field_${index}_label`) || "").trim();
     const fieldTypeRaw = String(formData.get(`field_${index}_type`) || "text").trim();
     const required = formData.get(`field_${index}_required`) === "on";
     const optionsRaw = String(formData.get(`field_${index}_options`) || "").trim();
@@ -61,10 +64,22 @@ function parseFieldRows(formData: FormData) {
     const helpText = String(formData.get(`field_${index}_help_text`) || "").trim();
     const defaultValue = String(formData.get(`field_${index}_default_value`) || "").trim();
     const widthRaw = String(formData.get(`field_${index}_width`) || "full").trim();
-    const validationRule = String(formData.get(`field_${index}_validation_rule`) || "").trim();
+    const validationPresetRaw = String(formData.get(`field_${index}_validation_rule`) || "none").trim();
+
+    const label = labelRaw || fieldNameRaw.replace(/_/g, " ");
+    const generatedKey =
+      fieldNameRaw ||
+      label
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s_]/g, "")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
+        .slice(0, 48);
+    const fieldName = generatedKey;
 
     if (!fieldName && !label) continue;
-    if (!fieldName || !label) throw new Error(`Field ${index + 1}: both field key and label are required.`);
+    if (!fieldName || !label) throw new Error(`Field ${index + 1}: a field label is required.`);
     if (!/^[a-zA-Z][a-zA-Z0-9_]{1,48}$/.test(fieldName)) {
       throw new Error(`Field ${index + 1}: key must be alphanumeric with underscores.`);
     }
@@ -73,7 +88,7 @@ function parseFieldRows(formData: FormData) {
     const options =
       fieldTypeRaw === "select"
         ? optionsRaw
-            .split(",")
+            .split(/[\n,]/)
             .map((item) => item.trim())
             .filter(Boolean)
         : null;
@@ -81,6 +96,17 @@ function parseFieldRows(formData: FormData) {
     if (fieldTypeRaw === "select" && (!options || options.length === 0)) {
       throw new Error(`Field ${index + 1}: select fields require at least one option.`);
     }
+
+    const validationRule =
+      validationPresetRaw === "email"
+        ? "preset:email"
+        : validationPresetRaw === "phone"
+          ? "preset:phone"
+          : validationPresetRaw === "required_text"
+            ? "preset:required_text"
+            : validationPresetRaw === "optional_text"
+              ? "preset:optional_text"
+              : null;
 
     rows.push({
       field_name: fieldName,
@@ -95,6 +121,11 @@ function parseFieldRows(formData: FormData) {
       validation_rule: validationRule || null,
       position: index
     });
+  }
+
+  const duplicateKey = rows.find((row, index) => rows.findIndex((item) => item.field_name === row.field_name) !== index);
+  if (duplicateKey) {
+    throw new Error(`Field keys must be unique. Duplicate key: ${duplicateKey.field_name}`);
   }
 
   return rows;
@@ -114,6 +145,19 @@ function parseVisibilityForm(formData: FormData) {
     public_slug: visibility === "public" ? publicSlug : null,
     show_in_catalog: visibility === "public" ? showInCatalog : false,
     is_featured: visibility === "public" ? isFeatured : false
+  };
+}
+
+function parseViewerForm(formData: FormData) {
+  const viewerModeRaw = String(formData.get("viewer_mode") || "document").trim();
+  const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+
+  const viewerPageCountRaw = Number(formData.get("viewer_page_count") || 12);
+  const safePageCount = Number.isFinite(viewerPageCountRaw) ? Math.min(300, Math.max(1, Math.round(viewerPageCountRaw))) : 12;
+
+  return {
+    viewer_mode: viewerMode,
+    viewer_page_count: safePageCount
   };
 }
 
@@ -326,9 +370,18 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 
   const landingPage = parseLandingForm(formData);
 
+  const { data: existingData } = await supabase
+    .from("documents")
+    .select("landing_page")
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  const existingLanding = (existingData?.landing_page ?? {}) as Record<string, unknown>;
+
   const { error } = await supabase
     .from("documents")
-    .update({ landing_page: landingPage })
+    .update({ landing_page: { ...existingLanding, ...landingPage } })
     .eq("id", documentId)
     .eq("organization_id", ctx.organizationId);
 
@@ -370,10 +423,20 @@ export async function updateDocumentVisibility(documentId: string, formData: For
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
+  const viewerSettings = parseViewerForm(formData);
+
+  const { data: existingData } = await supabase
+    .from("documents")
+    .select("landing_page")
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  const existingLanding = (existingData?.landing_page ?? {}) as Record<string, unknown>;
 
   const { error } = await supabase
     .from("documents")
-    .update(payload)
+    .update({ ...payload, landing_page: { ...existingLanding, ...viewerSettings } })
     .eq("id", documentId)
     .eq("organization_id", ctx.organizationId);
 
