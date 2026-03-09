@@ -56,23 +56,67 @@ button {
   @apply rounded-2xl shadow-sm;
 }
 
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.btn-destructive,
+.btn-inline {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-55;
+  min-height: 2.5rem;
+  --tw-ring-color: color-mix(in oklab, var(--primary) 42%, transparent);
+  --tw-ring-offset-color: var(--background);
+}
+
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: #ffffff;
+  box-shadow: 0 6px 16px color-mix(in oklab, var(--primary) 32%, transparent);
 }
 
 .btn-primary:hover {
   filter: brightness(1.05);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background: transparent;
+  background: color-mix(in oklab, var(--card) 92%, var(--foreground) 8%);
   color: var(--foreground);
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in oklab, var(--border) 82%, var(--foreground) 18%);
 }
 
 .btn-secondary:hover {
-  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  background: color-mix(in oklab, var(--foreground) 10%, var(--card));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+
+.btn-ghost:hover {
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.btn-destructive {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn-destructive:hover {
+  filter: brightness(1.05);
+}
+
+.btn-inline {
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.65rem;
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, var(--foreground) 20%);
+  color: var(--foreground);
+}
+
+.btn-inline:hover {
+  background: color-mix(in oklab, var(--foreground) 12%, transparent);
 }
 
 .text-muted-foreground {

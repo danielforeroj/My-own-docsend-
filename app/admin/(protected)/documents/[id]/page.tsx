@@ -152,7 +152,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
       <section className="card p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Included in Spaces</h2>
-          <Link href="/admin/spaces" className="btn-secondary inline-flex items-center">Add to a space</Link>
+          <Link href="/admin/spaces" className="btn-secondary">Add to a space</Link>
         </div>
 
         {spacesError ? (

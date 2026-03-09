@@ -39,7 +39,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
 
   return (
     <div className="max-w-2xl space-y-4">
-      <Link href="/admin/spaces" className="text-sm text-slate-600">
+      <Link href="/admin/spaces" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back to spaces
       </Link>
       <h1 className="text-2xl font-semibold">Edit Space</h1>
@@ -52,7 +52,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
         </section>
       ) : null}
 
-      <form action={action} className="space-y-4 rounded-lg border border-slate-200 p-4">
+      <form action={action} className="space-y-4 rounded-2xl border border-border bg-card p-5">
         <div className="space-y-2">
           <label className="block text-sm font-medium">Name</label>
           <input name="name" defaultValue={space.name} required className="w-full" />
@@ -88,7 +88,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
           )}
         </div>
 
-        <button className="bg-slate-900 text-white" type="submit">
+        <button className="btn-primary" type="submit">
           Save changes
         </button>
       </form>

@@ -44,7 +44,7 @@ export default async function DocumentsPage() {
               <th className="px-4 py-3">Size</th>
               <th className="px-4 py-3">Visibility</th>
               <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -54,8 +54,10 @@ export default async function DocumentsPage() {
                 <td className="px-4 py-3 text-muted-foreground">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
                 <td className="px-4 py-3 text-muted-foreground">{document.visibility ?? "private"}</td>
                 <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
-                <td className="px-4 py-3 text-right">
-                  <Link className="btn-secondary inline-flex items-center" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create link</Link>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
+                  <Link className="btn-inline" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create link</Link>
+                  </div>
                 </td>
               </tr>
             ))}

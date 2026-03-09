@@ -59,7 +59,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className="btn-secondary inline-flex h-9 w-9 items-center justify-center p-0"
+      className="btn-ghost h-9 w-9 p-0"
     >
       <span aria-hidden="true" className="text-base leading-none">{theme === "dark" ? "☀️" : "🌙"}</span>
     </button>

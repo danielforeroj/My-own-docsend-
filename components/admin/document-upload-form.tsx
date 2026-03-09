@@ -79,7 +79,7 @@ export function DocumentUploadForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-slate-200 p-4">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-5">
       <div className="space-y-2">
         <label className="block text-sm font-medium">Title</label>
         <input value={title} onChange={(event) => setTitle(event.target.value)} required className="w-full" />
@@ -96,10 +96,10 @@ export function DocumentUploadForm() {
         />
       </div>
 
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-600">{state.success}</p> : null}
+      {state.error ? <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{state.error}</p> : null}
+      {state.success ? <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">{state.success}</p> : null}
 
-      <button className="bg-slate-900 text-white disabled:opacity-60" type="submit" disabled={state.loading}>
+      <button className="btn-primary" type="submit" disabled={state.loading}>
         {state.loading ? "Uploading…" : "Upload"}
       </button>
     </form>

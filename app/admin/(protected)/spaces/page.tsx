@@ -20,7 +20,7 @@ export default async function SpacesPage() {
 
       <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Slug</th><th className="px-4 py-3">Visibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead>
+          <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Slug</th><th className="px-4 py-3">Visibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
           <tbody>
             {spaces.map((space: { id: string; name: string; slug: string; is_active: boolean; visibility?: string }) => (
               <tr key={space.id} className="border-b border-border last:border-b-0">
@@ -28,7 +28,7 @@ export default async function SpacesPage() {
                 <td className="px-4 py-3 text-muted-foreground">{space.slug}</td>
                 <td className="px-4 py-3 text-muted-foreground">{space.visibility ?? "private"}</td>
                 <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{space.is_active ? "Active" : "Inactive"}</span></td>
-                <td className="space-x-2 px-4 py-3 text-right"><Link className="btn-secondary inline-flex items-center" href={`/admin/spaces/${space.id}/edit`}>Edit</Link></td>
+                <td className="px-4 py-3"><Link className="btn-inline" href={`/admin/spaces/${space.id}/edit`}>Edit</Link></td>
               </tr>
             ))}
           </tbody>
