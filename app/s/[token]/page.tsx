@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { submitIntake } from "@/app/s/[token]/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getShareLinkByToken, getValidAccessGrant, ShareField } from "@/lib/share";
+import { getPublicShareByToken, shouldUseDemoData } from "@/lib/data/repository";
+import { PublicShell, type LandingConfig } from "@/components/public/public-shell";
 
 async function getFields(shareLinkId: string): Promise<ShareField[]> {
   const supabase = createAdminClient();
@@ -59,111 +61,6 @@ function FieldRenderer({ field }: { field: ShareField & { help_text?: string | n
   return <input type={type} {...commonProps} />;
 }
 
-type LandingConfig = {
-  page_title?: string | null;
-  short_description?: string | null;
-  eyebrow?: string | null;
-  hero_image_url?: string | null;
-  logo_url?: string | null;
-  cta_label?: string | null;
-  cta_url?: string | null;
-  sidebar_info?: string | null;
-  disclaimer?: string | null;
-  highlights?: string[];
-  about?: string | null;
-  footer_text?: string | null;
-  layout_variant?: "centered_hero" | "split_hero" | "minimal_header" | "content_first" | "sidebar_layout";
-  show_disclaimer?: boolean;
-  show_sidebar?: boolean;
-  show_about?: boolean;
-  show_highlights?: boolean;
-};
-
-function PublicShell({
-  landing,
-  title,
-  description,
-  children
-}: {
-  landing: LandingConfig;
-  title: string;
-  description?: string | null;
-  children: React.ReactNode;
-}) {
-  const heading = landing.page_title || title;
-  const body = landing.short_description || description;
-  const variant = landing.layout_variant ?? "centered_hero";
-
-  const sectionClass =
-    variant === "minimal_header"
-      ? "overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
-      : "overflow-hidden rounded-3xl border border-border bg-card shadow-sm";
-
-  const contentLayoutClass =
-    variant === "split_hero"
-      ? "grid gap-6 md:grid-cols-2"
-      : variant === "content_first"
-        ? "space-y-6"
-        : "space-y-6";
-
-  const renderSidebar = (landing.show_sidebar ?? variant === "sidebar_layout") && landing.sidebar_info;
-
-  return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6">
-      <section className={sectionClass}>
-        {landing.hero_image_url && variant !== "minimal_header" ? <img src={landing.hero_image_url} alt="hero" className="h-52 w-full object-cover" /> : null}
-        <div className="p-6 md:p-10">
-          {landing.logo_url ? <img src={landing.logo_url} alt="logo" className="mb-4 h-8 w-auto" /> : null}
-          {landing.eyebrow ? <p className="text-xs font-semibold uppercase tracking-wide text-primary">{landing.eyebrow}</p> : null}
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">{heading}</h1>
-          {body ? <p className="mt-3 max-w-3xl text-muted-foreground">{body}</p> : null}
-          {landing.cta_label && landing.cta_url ? (
-            <div className="mt-4">
-              <a href={landing.cta_url} className="btn-secondary inline-flex" target="_blank" rel="noreferrer">
-                {landing.cta_label}
-              </a>
-            </div>
-          ) : null}
-
-          {(landing.show_highlights ?? true) && landing.highlights?.length ? (
-            <ul className="mt-5 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-              {landing.highlights.map((item) => (
-                <li key={item} className="rounded-lg border border-border bg-background px-3 py-2">
-                  • {item}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          <div className={`mt-8 ${contentLayoutClass}`}>
-            {variant === "split_hero" ? (
-              <>
-                <div className="space-y-4">{children}</div>
-                {renderSidebar ? <aside className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">{landing.sidebar_info}</aside> : null}
-              </>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-[1fr_260px]">
-                <div className="space-y-4">{children}</div>
-                {renderSidebar ? <aside className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">{landing.sidebar_info}</aside> : null}
-              </div>
-            )}
-          </div>
-
-          {(landing.show_about ?? false) && landing.about ? (
-            <section className="mt-6 rounded-xl border border-border bg-background p-4">
-              <h2 className="mb-2 text-sm font-semibold">About</h2>
-              <p className="text-sm text-muted-foreground">{landing.about}</p>
-            </section>
-          ) : null}
-
-          {(landing.show_disclaimer ?? false) && landing.disclaimer ? <p className="mt-4 text-xs text-muted-foreground">{landing.disclaimer}</p> : null}
-          {landing.footer_text ? <p className="mt-6 text-xs text-muted-foreground">{landing.footer_text}</p> : null}
-        </div>
-      </section>
-    </main>
-  );
-}
-
 async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: { linkId: string; documentId: string | null; spaceId: string | null; visitorSubmissionId: string | null }) {
   const supabase = createAdminClient();
   const headerStore = await headers();
@@ -192,6 +89,44 @@ async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: {
 }
 
 export default async function PublicSharePage({ params, searchParams }: { params: { token: string }; searchParams?: { submitted?: string } }) {
+  if (shouldUseDemoData()) {
+    const demo = getPublicShareByToken(params.token);
+    if (!demo) notFound();
+
+    if (demo.link.linkType === "document" && demo.document) {
+      return (
+        <PublicShell landing={(demo.document.landingPage ?? {}) as LandingConfig} title={demo.document.title}>
+          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
+            Demo mode: backend file preview and downloads are disabled.
+          </p>
+          <div className="rounded-xl border border-border bg-background p-6 text-sm text-muted-foreground">
+            Document preview placeholder for <span className="font-medium text-foreground">{demo.document.title}</span>.
+          </div>
+        </PublicShell>
+      );
+    }
+
+    if (demo.link.linkType === "space" && demo.space) {
+      return (
+        <PublicShell landing={(demo.space.landingPage ?? {}) as LandingConfig} title={demo.space.name} description={demo.space.description}>
+          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
+            Demo mode: intake submission and secure downloads are disabled.
+          </p>
+          <section className="space-y-3 rounded-xl border border-border bg-background p-4">
+            <h2 className="text-lg font-semibold">Documents in this Space</h2>
+            {demo.documents.map((doc) => (
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2" key={doc.id}>
+                <span className="font-medium">{doc.title}</span>
+                <span className="btn-secondary opacity-70">Open (Demo mode)</span>
+              </div>
+            ))}
+          </section>
+        </PublicShell>
+      );
+    }
+
+    notFound();
+  }
   const link = await getShareLinkByToken(params.token);
   if (!link) notFound();
 

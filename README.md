@@ -6,9 +6,15 @@ DocSend-style internal sharing app built with **Next.js App Router + TypeScript 
 
 - **Admin app**: `/admin/*`
   - Login, dashboard, documents, spaces, share links, analytics, settings.
-- **Public share pages**: `/s/:token`
+- **Public catalog homepage**: `/`
+  - Shows only public items allowed in catalog.
+  - Separates spaces and documents, with featured items first when available.
+- **Public slug routes**: `/docs/[slug]`, `/spaces/[slug]`
+  - Only resolve items marked `visibility=public` with a valid `public_slug`.
+- **Private/share routes**: `/s/:token`
   - Supports document links and space links.
   - Optional intake gate with custom fields.
+  - Works for private sharing flows independent of catalog visibility.
 - **Storage**: Supabase Storage bucket `documents` (private).
   - PDFs upload directly from browser to Storage using short-lived signed upload URL.
 - **DB**: Supabase Postgres tables for organizations, docs, spaces, share links, intake submissions, views/downloads.
@@ -16,22 +22,81 @@ DocSend-style internal sharing app built with **Next.js App Router + TypeScript 
 
 ---
 
-## Required environment variables
+## Runtime modes and environment variables
 
-### Required for app runtime
+### Demo mode (safe pre-Supabase setup)
 
+Use demo mode when you want the app to boot and render key routes before wiring Supabase.
+
+Required:
+
+- `NEXT_PUBLIC_DEMO_MODE=true`
+- `NEXT_PUBLIC_SITE_URL`
+
+Notes:
+
+- `/` and `/admin/login` render safely without Supabase values.
+- Middleware will not hard-block `/admin` in demo mode.
+- Admin auth/data features still require Supabase and are not mocked in this PR.
+
+Demo preview behavior:
+
+- Read-only pages render from built-in mock repository data (documents, spaces, share links, analytics, settings, and public share pages).
+- Mutating actions are disabled/no-op in demo mode so UI flows do not crash.
+- Demo share links available out of the box: `/s/demo-document` and `/s/demo-space`.
+
+
+### Connected mode (full Supabase runtime)
+
+Use connected mode for real auth/data behavior.
+
+Required:
+
+- `NEXT_PUBLIC_DEMO_MODE=false` (or unset)
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_SITE_URL`
 
-### Optional (lead notification emails)
+Optional (lead notification emails):
 
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `LEAD_NOTIFICATION_EMAIL`
 
 Use `.env.example` as a starting point.
+
+---
+
+## Workflows
+
+### Demo mode workflow (no Supabase required)
+
+1. Set `NEXT_PUBLIC_DEMO_MODE=true`.
+2. Start the app.
+3. Review public catalog (`/`), public slug routes (`/docs/[slug]`, `/spaces/[slug]`), and admin preview routes.
+4. Mutating actions are disabled/no-op in demo mode by design.
+
+### Connected Supabase workflow
+
+1. Set `NEXT_PUBLIC_DEMO_MODE=false` (or unset).
+2. Configure Supabase env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+3. Run migrations (including visibility/public slug migration).
+4. Use admin pages to configure visibility and slugs per item.
+
+### Public vs private content behavior
+
+- `visibility=public` + `show_in_catalog=true` + `public_slug` => shown on homepage catalog and accessible via slug route.
+- `visibility=private` => never listed on homepage or slug routes.
+- Private items can still be shared through private/share-link flows (`/s/[token]`).
+
+### Route map
+
+- `/` — public catalog
+- `/docs/[slug]` — public document page
+- `/spaces/[slug]` — public space page
+- `/s/[token]` — private/share link experience (intake-aware)
+- `/admin/*` — admin app
 
 ---
 
@@ -61,6 +126,7 @@ npm run build
    - `supabase/migrations/0002_public_share_links.sql`
    - `supabase/migrations/0003_branding_and_landing.sql`
    - `supabase/migrations/0004_upload_and_analytics_cleanup.sql`
+   - `supabase/migrations/0005_visibility_and_public_slugs.sql`
 3. Create Storage bucket:
    - Name: `documents`
    - Public: `false` (private)
@@ -88,6 +154,7 @@ on conflict (id) do update set full_name = excluded.full_name;
 2. Import project in Vercel.
 3. Set framework preset to Next.js (default).
 4. Add env vars in Vercel Project Settings:
+   - `NEXT_PUBLIC_DEMO_MODE` (set `false` for connected mode, `true` for demo mode)
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
@@ -109,7 +176,8 @@ No additional infra/services required.
 - [ ] Org + membership seed SQL executed
 
 ### Vercel
-- [ ] All required env vars configured
+- [ ] `NEXT_PUBLIC_DEMO_MODE` set correctly for your deployment mode
+- [ ] All required env vars configured for connected mode
 - [ ] Production deployment succeeds
 - [ ] `NEXT_PUBLIC_SITE_URL` matches production domain
 

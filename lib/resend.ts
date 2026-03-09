@@ -2,9 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 
-function hasResendConfig() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL && process.env.LEAD_NOTIFICATION_EMAIL);
-}
+import { isResendConfigured } from "@/lib/runtime";
 
 function escapeHtml(value: string) {
   return value
@@ -21,7 +19,7 @@ export async function sendNewLeadNotificationEmail(input: {
   payload: Record<string, string | boolean>;
   submittedAt: string;
 }) {
-  if (!hasResendConfig()) {
+  if (!isResendConfigured()) {
     return { skipped: true as const };
   }
 
