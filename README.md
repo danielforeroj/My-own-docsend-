@@ -6,10 +6,15 @@ DocSend-style internal sharing app built with **Next.js App Router + TypeScript 
 
 - **Admin app**: `/admin/*`
   - Login, dashboard, documents, spaces, share links, analytics, settings.
-- **Public share pages**: `/s/:token`
+- **Public catalog homepage**: `/`
+  - Shows only public items allowed in catalog.
+  - Separates spaces and documents, with featured items first when available.
+- **Public slug routes**: `/docs/[slug]`, `/spaces/[slug]`
+  - Only resolve items marked `visibility=public` with a valid `public_slug`.
+- **Private/share routes**: `/s/:token`
   - Supports document links and space links.
   - Optional intake gate with custom fields.
-- Public slug routes: `/docs/[slug]`, `/spaces/[slug]` (for public visibility items).
+  - Works for private sharing flows independent of catalog visibility.
 - **Storage**: Supabase Storage bucket `documents` (private).
   - PDFs upload directly from browser to Storage using short-lived signed upload URL.
 - **DB**: Supabase Postgres tables for organizations, docs, spaces, share links, intake submissions, views/downloads.
@@ -63,6 +68,38 @@ Use `.env.example` as a starting point.
 
 ---
 
+## Workflows
+
+### Demo mode workflow (no Supabase required)
+
+1. Set `NEXT_PUBLIC_DEMO_MODE=true`.
+2. Start the app.
+3. Review public catalog (`/`), public slug routes (`/docs/[slug]`, `/spaces/[slug]`), and admin preview routes.
+4. Mutating actions are disabled/no-op in demo mode by design.
+
+### Connected Supabase workflow
+
+1. Set `NEXT_PUBLIC_DEMO_MODE=false` (or unset).
+2. Configure Supabase env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+3. Run migrations (including visibility/public slug migration).
+4. Use admin pages to configure visibility and slugs per item.
+
+### Public vs private content behavior
+
+- `visibility=public` + `show_in_catalog=true` + `public_slug` => shown on homepage catalog and accessible via slug route.
+- `visibility=private` => never listed on homepage or slug routes.
+- Private items can still be shared through private/share-link flows (`/s/[token]`).
+
+### Route map
+
+- `/` — public catalog
+- `/docs/[slug]` — public document page
+- `/spaces/[slug]` — public space page
+- `/s/[token]` — private/share link experience (intake-aware)
+- `/admin/*` — admin app
+
+---
+
 ## Local development
 
 ```bash
@@ -89,6 +126,7 @@ npm run build
    - `supabase/migrations/0002_public_share_links.sql`
    - `supabase/migrations/0003_branding_and_landing.sql`
    - `supabase/migrations/0004_upload_and_analytics_cleanup.sql`
+   - `supabase/migrations/0005_visibility_and_public_slugs.sql`
 3. Create Storage bucket:
    - Name: `documents`
    - Public: `false` (private)

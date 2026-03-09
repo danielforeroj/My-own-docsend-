@@ -67,7 +67,8 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
 
       <section className="card p-5">
-        <h2 className="mb-3 text-lg font-semibold">Public visibility</h2>
+        <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog by slug. Private items stay hidden from catalog and can still be shared via private/share links.</p>
         <form action={visibilityAction} className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1">
             <label className="label">Visibility</label>
@@ -77,10 +78,10 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
             </select>
           </div>
           <div className="space-y-1">
-            <label className="label">Public slug</label>
+            <label className="label">Public slug (for /docs or /spaces route)</label>
             <input name="public_slug" defaultValue={document.public_slug ?? ""} className="w-full" placeholder="my-public-document" />
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in public catalog</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
           <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save visibility</button></div>
         </form>

@@ -1,31 +1,33 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPublicSpaceBySlug } from "@/lib/data/repository";
+import { PublicShell, type LandingConfig } from "@/components/public/public-shell";
 
 export default async function PublicSpacePage({ params }: { params: { slug: string } }) {
-  const space = await getPublicSpaceBySlug(params.slug);
-  if (!space) notFound();
+  const result = await getPublicSpaceBySlug(params.slug);
+  if (!result) notFound();
 
-  const landing = ((space as { landing_page?: Record<string, unknown> }).landing_page ?? {}) as { page_title?: string; short_description?: string };
-  const docs = (space as { documents?: Array<{ id: string; title: string; visibility?: string }> }).documents ?? [];
+  const space = result as {
+    name: string;
+    description: string | null;
+    landing_page?: LandingConfig | null;
+    documents?: Array<{ id: string; title: string }>;
+  };
+
+  const landing = (space.landing_page ?? {}) as LandingConfig;
+  const docs = space.documents ?? [];
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10">
-      <section className="card space-y-5 p-6 md:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Public space</p>
-        <h1 className="text-3xl font-semibold tracking-tight">{landing.page_title ?? (space as { name: string }).name}</h1>
-        {landing.short_description ? <p className="text-muted-foreground">{landing.short_description}</p> : null}
-
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Included documents</h2>
-          {docs.filter((doc) => (doc.visibility ?? "public") === "public").map((doc) => (
-            <div key={doc.id} className="rounded-lg border border-border px-3 py-2 text-sm">{doc.title}</div>
-          ))}
-          {!docs.length ? <p className="text-sm text-muted-foreground">No documents available.</p> : null}
-        </div>
-
-        <Link href="/" className="btn-secondary inline-flex">Back home</Link>
+    <PublicShell landing={landing} title={space.name} description={space.description}>
+      <section className="space-y-3 rounded-xl border border-border bg-background p-4">
+        <h2 className="text-lg font-semibold">Documents in this Space</h2>
+        {docs.map((doc) => (
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2" key={doc.id}>
+            <span className="font-medium">{doc.title}</span>
+            <span className="btn-secondary opacity-80">Public item</span>
+          </div>
+        ))}
+        {!docs.length ? <p className="text-sm text-muted-foreground">No public documents available in this space.</p> : null}
       </section>
-    </main>
+    </PublicShell>
   );
 }

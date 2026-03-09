@@ -212,7 +212,7 @@ export async function getPublicSpaceBySlug(slug: string) {
   if (shouldUseDemoData()) {
     const space = mockSpaces.find((item) => item.visibility === "public" && item.publicSlug === slug);
     if (!space) return null;
-    const docs = mockDocuments.filter((doc) => space.documentIds.includes(doc.id));
+    const docs = mockDocuments.filter((doc) => space.documentIds.includes(doc.id) && doc.visibility === "public");
     return { ...space, documents: docs };
   }
 
@@ -236,6 +236,8 @@ export async function getPublicSpaceBySlug(slug: string) {
 
   return {
     ...space,
-    documents: mappedDocs.map((row) => row.documents).filter((row): row is { id: string; title: string; visibility: "public" | "private" } => Boolean(row))
+    documents: mappedDocs
+      .map((row) => row.documents)
+      .filter((row): row is { id: string; title: string; visibility: "public" | "private" } => Boolean(row && row.visibility === "public"))
   };
 }
