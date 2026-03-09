@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createClientOrNull } from "@/lib/supabase/browser";
-import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
+import { createClientOrNull, isBrowserDemoMode, isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
@@ -11,8 +10,8 @@ export default function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const supabaseReady = isSupabaseConfigured();
-  const demoMode = isDemoMode() || !supabaseReady;
+  const supabaseReady = isBrowserSupabaseConfigured();
+  const demoMode = isBrowserDemoMode() || !supabaseReady;
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
