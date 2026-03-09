@@ -7,7 +7,38 @@ import { randomUUID } from "crypto";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClientOrNull } from "@/lib/supabase/server";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
+import { normalizeSlug } from "@/lib/slug";
 
+
+
+export type AdminActionState = {
+  ok: boolean;
+  message?: string;
+  fieldErrors?: Record<string, string[]>;
+};
+
+class AdminFormError extends Error {
+  fieldErrors: Record<string, string[]>;
+
+  constructor(message: string, fieldErrors: Record<string, string[]>) {
+    super(message);
+    this.fieldErrors = fieldErrors;
+  }
+}
+
+async function withActionState(run: () => Promise<void>, successMessage: string): Promise<AdminActionState> {
+  try {
+    await run();
+    return { ok: true, message: successMessage };
+  } catch (error) {
+    if (error instanceof AdminFormError) {
+      return { ok: false, message: error.message, fieldErrors: error.fieldErrors };
+    }
+
+    const message = error instanceof Error ? error.message : "Something went wrong.";
+    return { ok: false, message };
+  }
+}
 
 function shouldDisableMutations() {
   return isDemoMode() || !isSupabaseConfigured();
@@ -20,14 +51,7 @@ function isAllowedFieldType(value: string): value is AllowedFieldType {
   return ALLOWED_FIELD_TYPES.has(value as AllowedFieldType);
 }
 
-function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
+const slugify = normalizeSlug;
 
 function parseStringList(value: string) {
   return value
@@ -140,12 +164,42 @@ function parseVisibilityForm(formData: FormData) {
   const showInCatalog = formData.get("show_in_catalog") === "on";
   const isFeatured = formData.get("is_featured") === "on";
 
+  if (visibility === "public" && !publicSlug) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      public_slug: ["Public URL slug is required when visibility is public."]
+    });
+  }
+
   return {
     visibility,
-    public_slug: visibility === "public" ? publicSlug : null,
+    public_slug: publicSlug,
     show_in_catalog: visibility === "public" ? showInCatalog : false,
     is_featured: visibility === "public" ? isFeatured : false
   };
+}
+
+async function ensureUniquePublicSlug({
+  supabase,
+  table,
+  organizationId,
+  slug,
+  excludeId
+}: {
+  supabase: any;
+  table: "documents" | "spaces";
+  organizationId: string;
+  slug: string | null;
+  excludeId?: string;
+}) {
+  if (!slug) return;
+  let query = supabase.from(table).select("id").eq("organization_id", organizationId).eq("public_slug", slug).limit(1);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query;
+  if (data?.length) {
+    throw new AdminFormError(`That ${table === "documents" ? "document" : "space"} URL slug is already in use.`, {
+      public_slug: ["This slug is already taken in your workspace."]
+    });
+  }
 }
 
 function parseViewerForm(formData: FormData) {
@@ -195,11 +249,19 @@ export async function createSpace(formData: FormData) {
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
+  const publicSlugRaw = String(formData.get("public_slug") || "").trim();
+  const publicSlug = publicSlugRaw ? slugify(publicSlugRaw) : null;
   const documentIds = formData.getAll("document_ids").map(String);
 
-  if (!name) throw new Error("Space name is required.");
+  if (!name || !publicSlug) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      ...(name ? {} : { name: ["Space name is required."] }),
+      ...(publicSlug ? {} : { public_slug: ["Space URL slug is required."] })
+    });
+  }
 
   const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
+  await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug });
 
   const { data: space, error: spaceError } = await supabase
     .from("spaces")
@@ -208,7 +270,8 @@ export async function createSpace(formData: FormData) {
       created_by: ctx.userId,
       name,
       slug,
-      description: description || null
+      description: description || null,
+      public_slug: publicSlug
     })
     .select("id")
     .single();
@@ -231,20 +294,29 @@ export async function updateSpace(spaceId: string, formData: FormData) {
     return;
   }
 
-  await requireAdminContext();
+  const ctx = await requireAdminContext();
   const supabase = (await createClientOrNull()) as any;
   if (!supabase) return;
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
+  const publicSlugRaw = String(formData.get("public_slug") || "").trim();
+  const publicSlug = publicSlugRaw ? slugify(publicSlugRaw) : null;
   const active = formData.get("is_active") === "on";
   const documentIds = formData.getAll("document_ids").map(String);
 
-  if (!name) throw new Error("Space name is required.");
+  if (!name || !publicSlug) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      ...(name ? {} : { name: ["Space name is required."] }),
+      ...(publicSlug ? {} : { public_slug: ["Space URL slug is required."] })
+    });
+  }
+
+  await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug, excludeId: spaceId });
 
   const { error: updateError } = await supabase
     .from("spaces")
-    .update({ name, description: description || null, is_active: active, updated_at: new Date().toISOString() })
+    .update({ name, description: description || null, public_slug: publicSlug, is_active: active, updated_at: new Date().toISOString() })
     .eq("id", spaceId);
   if (updateError) throw new Error(updateError.message);
 
@@ -424,6 +496,7 @@ export async function updateDocumentVisibility(documentId: string, formData: For
 
   const payload = parseVisibilityForm(formData);
   const viewerSettings = parseViewerForm(formData);
+  await ensureUniquePublicSlug({ supabase, table: "documents", organizationId: ctx.organizationId, slug: payload.public_slug, excludeId: documentId });
 
   const { data: existingData } = await supabase
     .from("documents")
@@ -455,6 +528,7 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
+  await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: payload.public_slug, excludeId: spaceId });
 
   const { error } = await supabase
     .from("spaces")
@@ -464,4 +538,29 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+}
+
+
+export async function createSpaceActionState(_prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return withActionState(() => createSpace(formData), "Space created.");
+}
+
+export async function updateSpaceActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return withActionState(() => updateSpace(spaceId, formData), "Space updated.");
+}
+
+export async function updateDocumentVisibilityActionState(documentId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return withActionState(() => updateDocumentVisibility(documentId, formData), "Visibility updated.");
+}
+
+export async function updateSpaceVisibilityActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return withActionState(() => updateSpaceVisibility(spaceId, formData), "Visibility updated.");
+}
+
+export async function updateDocumentLandingActionState(documentId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return withActionState(() => updateDocumentLanding(documentId, formData), "Landing config updated.");
+}
+
+export async function updateSpaceLandingActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return withActionState(() => updateSpaceLanding(spaceId, formData), "Landing config updated.");
 }

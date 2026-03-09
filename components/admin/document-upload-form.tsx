@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import { normalizeSlug } from "@/lib/slug";
 
 type UploadState = {
   error: string | null;
@@ -13,8 +14,37 @@ type UploadState = {
 export function DocumentUploadForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [publicSlug, setPublicSlug] = useState("");
+  const [manualSlug, setManualSlug] = useState(false);
+  const [host, setHost] = useState("your-domain.com");
+  const [slugError, setSlugError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [state, setState] = useState<UploadState>({ error: null, success: null, loading: false });
+
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setHost(window.location.host || "your-domain.com");
+    }
+  }, []);
+
+  async function checkSlug(nextSlug: string) {
+    const normalized = normalizeSlug(nextSlug);
+    if (!normalized) {
+      setSlugError("Slug is required.");
+      return false;
+    }
+
+    const response = await fetch(`/api/admin/slugs/check?namespace=document&slug=${encodeURIComponent(normalized)}`);
+    const payload = (await response.json()) as { available?: boolean; message?: string; normalizedSlug?: string };
+    if (payload.normalizedSlug && payload.normalizedSlug !== publicSlug) setPublicSlug(payload.normalizedSlug);
+    if (!payload.available) {
+      setSlugError(payload.message ?? "That slug is unavailable.");
+      return false;
+    }
+    setSlugError(null);
+    return true;
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,6 +57,12 @@ export function DocumentUploadForm() {
 
     if (!file || file.type !== "application/pdf") {
       setState({ error: "Please select a PDF file.", success: null, loading: false });
+      return;
+    }
+
+    const slugOk = await checkSlug(publicSlug);
+    if (!slugOk) {
+      setState({ error: null, success: null, loading: false });
       return;
     }
 
@@ -56,6 +92,7 @@ export function DocumentUploadForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
+          publicSlug: publicSlug.trim(),
           storagePath: uploadData.path,
           fallbackFileSize: file.size,
           fallbackMimeType: file.type
@@ -68,6 +105,8 @@ export function DocumentUploadForm() {
       }
 
       setTitle("");
+      setPublicSlug("");
+      setManualSlug(false);
       setFile(null);
       setState({ error: null, success: "Upload complete.", loading: false });
       router.push("/admin/documents");
@@ -82,7 +121,40 @@ export function DocumentUploadForm() {
     <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-5">
       <div className="space-y-2">
         <label className="block text-sm font-medium">Title</label>
-        <input value={title} onChange={(event) => setTitle(event.target.value)} required className="w-full" />
+        <input
+          value={title}
+          onChange={(event) => {
+            const next = event.target.value;
+            setTitle(next);
+            if (!manualSlug) setPublicSlug(normalizeSlug(next));
+          }}
+          required
+          className="w-full"
+        />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium">Public URL slug</label>
+          <span className="text-xs text-muted-foreground">{manualSlug ? "Manual" : "Auto-generated"}</span>
+        </div>
+        <input
+          value={publicSlug}
+          onChange={(event) => {
+            setManualSlug(true);
+            setPublicSlug(normalizeSlug(event.target.value));
+            setSlugError(null);
+          }}
+          onBlur={() => {
+            void checkSlug(publicSlug);
+          }}
+          required
+          pattern="[a-z0-9-]+"
+          title="Use lowercase letters, numbers, and hyphens"
+          className="w-full"
+          placeholder="my-custom-doc"
+        />
+        <p className="text-xs text-muted-foreground">Preview: https://{host}/d/{publicSlug || "my-custom-doc"}</p>
+        {slugError ? <p className="text-xs text-red-600 dark:text-red-300">{slugError}</p> : null}
       </div>
       <div className="space-y-2">
         <label className="block text-sm font-medium">PDF file</label>

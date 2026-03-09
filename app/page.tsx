@@ -32,17 +32,17 @@ export default async function HomePage() {
           <h2 className="text-xl font-semibold">Featured</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {featuredSpaces.map((space) => (
-              <Link key={space.id} href={`/spaces/${(space as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
+              <Link key={space.id} href={`/sp/${(space as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">Featured space</p>
                 <h3 className="mt-1 text-lg font-semibold">{(space as { name: string }).name}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{(space as { description: string | null }).description ?? "Curated public space."}</p>
               </Link>
             ))}
             {featuredDocuments.map((doc) => (
-              <Link key={doc.id} href={`/docs/${(doc as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
+              <Link key={doc.id} href={`/d/${(doc as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">Featured document</p>
                 <h3 className="mt-1 text-lg font-semibold">{(doc as { title: string }).title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Public document available by slug route.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Public document page with a personalized URL.</p>
               </Link>
             ))}
           </div>
@@ -58,7 +58,7 @@ export default async function HomePage() {
         {spaces.length ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {spaces.map((space) => (
-              <Link key={space.id} href={`/spaces/${(space as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
+              <Link key={space.id} href={`/sp/${(space as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Space</p>
                 <h3 className="mt-1 text-lg font-semibold">{(space as { name: string }).name}</h3>
                 <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{(space as { description: string | null }).description ?? "No description available."}</p>
@@ -79,7 +79,7 @@ export default async function HomePage() {
         {documents.length ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {documents.map((doc) => (
-              <Link key={doc.id} href={`/docs/${(doc as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
+              <Link key={doc.id} href={`/d/${(doc as { public_slug: string }).public_slug}`} className="card rounded-2xl p-5 transition hover:border-primary/60">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Document</p>
                 <h3 className="mt-1 text-lg font-semibold">{(doc as { title: string }).title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">Published document page.</p>

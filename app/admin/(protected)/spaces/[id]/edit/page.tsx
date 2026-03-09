@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateSpace } from "@/app/admin/actions";
+import { updateSpaceActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { SlugField } from "@/components/admin/slug-field";
+import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 
 export default async function EditSpacePage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
@@ -13,7 +14,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
   const [{ data: spaceData, error: spaceError }, { data: documentsData, error: documentsError }, { data: selectedData, error: selectedError }] = await Promise.all([
     supabase
       .from("spaces")
-      .select("id, name, description, is_active")
+      .select("id, name, description, is_active, public_slug")
       .eq("id", params.id)
       .eq("organization_id", ctx.organizationId)
       .maybeSingle(),
@@ -21,7 +22,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
     supabase.from("space_documents").select("document_id").eq("space_id", params.id)
   ]);
 
-  type SpaceRow = Pick<Database["public"]["Tables"]["spaces"]["Row"], "id" | "name" | "description" | "is_active">;
+  type SpaceRow = Pick<Database["public"]["Tables"]["spaces"]["Row"], "id" | "name" | "description" | "is_active" | "public_slug">;
   type DocumentRow = Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">;
   type SpaceDocumentRow = Pick<Database["public"]["Tables"]["space_documents"]["Row"], "document_id">;
 
@@ -36,7 +37,7 @@ export default async function EditSpacePage({ params }: { params: { id: string }
   if (!space) notFound();
 
   const selectedIds = new Set(selected?.map((item) => item.document_id));
-  const action = updateSpace.bind(null, space.id);
+  const action = updateSpaceActionState.bind(null, space.id);
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -53,22 +54,33 @@ export default async function EditSpacePage({ params }: { params: { id: string }
         </section>
       ) : null}
 
-      <form action={action} className="space-y-4 rounded-2xl border border-border bg-card p-5">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Name</label>
-          <input name="name" defaultValue={space.name} required className="w-full" />
-        </div>
+      <ServerActionForm action={action} className="space-y-4 rounded-2xl border border-border bg-card p-5" idleLabel="Save changes" pendingLabel="Saving changes...">
+        {(state) => (
+          <>
+            <SlugField
+              sourceName="name"
+              sourceLabel="Name"
+              sourceInitial={space.name}
+              slugName="public_slug"
+              slugInitial={space.public_slug ?? ""}
+              slugLabel="Public URL slug"
+              routePrefix="/sp"
+              namespace="space"
+              excludeId={space.id}
+            />
+            <FormFieldError state={state} name="name" />
+            <FormFieldError state={state} name="public_slug" />
 
-        <div className="space-y-2">
+            <div className="space-y-2">
           <label className="block text-sm font-medium">Description</label>
           <textarea name="description" defaultValue={space.description ?? ""} className="w-full" rows={4} />
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="is_active" defaultChecked={space.is_active} /> Active
         </label>
 
-        <div className="space-y-2">
+            <div className="space-y-2">
           <label className="block text-sm font-medium">Documents in this space</label>
           {documents.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents found. Upload documents first from the documents library.</p>
@@ -87,10 +99,11 @@ export default async function EditSpacePage({ params }: { params: { id: string }
               ))}
             </div>
           )}
-        </div>
+            </div>
+          </>
+        )}
 
-        <SubmitButton className="btn-primary" idleLabel="Save changes" pendingLabel="Saving changes..." />
-      </form>
+      </ServerActionForm>
     </div>
   );
 }

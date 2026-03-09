@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateDocumentLanding, updateDocumentVisibility } from "@/app/admin/actions";
+import { updateDocumentLandingActionState, updateDocumentVisibilityActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
+import { SlugField } from "@/components/admin/slug-field";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -77,8 +78,8 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   const adminSupabase = createAdminClient();
   const { data: signed } = await adminSupabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 30);
   const landing = ((document.landing_page ?? {}) as LandingConfig) || {};
-  const action = updateDocumentLanding.bind(null, document.id);
-  const visibilityAction = updateDocumentVisibility.bind(null, document.id);
+  const action = updateDocumentLandingActionState.bind(null, document.id);
+  const visibilityAction = updateDocumentVisibilityActionState.bind(null, document.id);
 
   return (
     <div className="space-y-8">
@@ -105,8 +106,10 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
       <section className="card p-5">
         <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog by slug. Private items stay hidden from catalog and can still be shared via private/share links.</p>
-        <form action={visibilityAction} className="grid gap-4 md:grid-cols-2">
+        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
+        <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Save visibility" pendingLabel="Saving visibility...">
+          {(state) => (
+            <>
           <div className="space-y-1">
             <label className="label">Visibility</label>
             <select name="visibility" defaultValue={document.visibility} className="w-full">
@@ -115,8 +118,25 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
             </select>
           </div>
           <div className="space-y-1">
-            <label className="label">Public slug (for /docs or /spaces route)</label>
-            <input name="public_slug" defaultValue={document.public_slug ?? ""} className="w-full" placeholder="my-public-document" />
+            <SlugField slugName="public_slug" slugInitial={document.public_slug ?? ""} sourceInitial={document.title} slugLabel="Public URL slug" routePrefix="/d" namespace="document" excludeId={document.id} />
+          </div>
+          <div className="space-y-1">
+            <label className="label">Viewer mode</label>
+            <select name="viewer_mode" defaultValue={landing.viewer_mode ?? "document"} className="w-full">
+              <option value="document">Document (scroll)</option>
+              <option value="deck">Deck (slide-by-slide)</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="label">Viewer page count (for deck mode)</label>
+            <input
+              type="number"
+              min={1}
+              max={300}
+              name="viewer_page_count"
+              defaultValue={landing.viewer_page_count ?? 12}
+              className="w-full"
+            />
           </div>
           <div className="space-y-1">
             <label className="label">Viewer mode</label>
@@ -138,13 +158,15 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
-          <div className="md:col-span-2 flex justify-end"><SubmitButton className="btn-primary" idleLabel="Save visibility" pendingLabel="Saving visibility..." /></div>
-        </form>
+          <FormFieldError state={state} name="public_slug" />
+            </>
+          )}
+        </ServerActionForm>
       </section>
 
       <section className="card p-5">
         <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>
-        <form action={action} className="grid gap-4 md:grid-cols-2">
+        <ServerActionForm action={action} className="grid gap-4 md:grid-cols-2" idleLabel="Save landing config" pendingLabel="Saving landing config...">
           <div className="space-y-1 md:col-span-2"><label className="label">Page title</label><input name="landing_page_title" defaultValue={landing.page_title ?? ""} className="w-full" /></div>
           <div className="space-y-1 md:col-span-2"><label className="label">Short description</label><textarea name="landing_short_description" rows={3} defaultValue={landing.short_description ?? ""} className="w-full" /></div>
           <div className="space-y-1"><label className="label">Eyebrow</label><input name="landing_eyebrow" defaultValue={landing.eyebrow ?? ""} className="w-full" /></div>
@@ -166,8 +188,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
             <label className="flex items-center gap-2"><input type="checkbox" name="landing_show_highlights" defaultChecked={landing.show_highlights ?? false} /> Show highlights</label>
           </div>
 
-          <div className="md:col-span-2 flex justify-end"><SubmitButton className="btn-primary" idleLabel="Save landing config" pendingLabel="Saving landing config..." /></div>
-        </form>
+          </ServerActionForm>
       </section>
 
       <section className="card p-4">
