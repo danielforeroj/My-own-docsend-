@@ -48,7 +48,7 @@ export const mockDocuments: MockDocument[] = [
     publicSlug: null,
     showInCatalog: false,
     isFeatured: false,
-    landingPage: { page_title: "Q2 Client Proposal", short_description: "Executive proposal deck for Q2 planning." }
+    landingPage: { page_title: "Q2 Client Proposal", short_description: "Executive proposal deck for Q2 planning.", viewer_mode: "deck", viewer_page_count: 12 }
   },
   {
     id: "doc-demo-2",
@@ -60,7 +60,7 @@ export const mockDocuments: MockDocument[] = [
     publicSlug: "product-one-pager",
     showInCatalog: true,
     isFeatured: true,
-    landingPage: { page_title: "Product One-Pager", short_description: "Public collateral for partner handoff." }
+    landingPage: { page_title: "Product One-Pager", short_description: "Public collateral for partner handoff.", viewer_mode: "document", viewer_page_count: 6 }
   }
 ];
 

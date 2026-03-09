@@ -22,11 +22,11 @@ export default async function HomePage() {
           Browse published spaces and documents. Only items explicitly marked public and allowed in catalog appear here.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link className="btn-secondary" href="/admin/login">
+          <Link className="btn-primary" href="/admin/login">
             Admin login
           </Link>
           <Link className="btn-secondary" href="/admin">
-            Open admin
+            Open admin workspace
           </Link>
         </div>
         {source === "demo" ? <p className="mt-4 text-xs text-yellow-300">Demo mode: catalog uses mock public content.</p> : null}

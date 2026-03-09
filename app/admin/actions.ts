@@ -117,6 +117,19 @@ function parseVisibilityForm(formData: FormData) {
   };
 }
 
+function parseViewerForm(formData: FormData) {
+  const viewerModeRaw = String(formData.get("viewer_mode") || "document").trim();
+  const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+
+  const viewerPageCountRaw = Number(formData.get("viewer_page_count") || 12);
+  const safePageCount = Number.isFinite(viewerPageCountRaw) ? Math.min(300, Math.max(1, Math.round(viewerPageCountRaw))) : 12;
+
+  return {
+    viewer_mode: viewerMode,
+    viewer_page_count: safePageCount
+  };
+}
+
 function parseLandingForm(formData: FormData) {
   return {
     page_title: String(formData.get("landing_page_title") || "").trim() || null,
@@ -326,9 +339,18 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 
   const landingPage = parseLandingForm(formData);
 
+  const { data: existingData } = await supabase
+    .from("documents")
+    .select("landing_page")
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  const existingLanding = (existingData?.landing_page ?? {}) as Record<string, unknown>;
+
   const { error } = await supabase
     .from("documents")
-    .update({ landing_page: landingPage })
+    .update({ landing_page: { ...existingLanding, ...landingPage } })
     .eq("id", documentId)
     .eq("organization_id", ctx.organizationId);
 
@@ -370,10 +392,20 @@ export async function updateDocumentVisibility(documentId: string, formData: For
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
+  const viewerSettings = parseViewerForm(formData);
+
+  const { data: existingData } = await supabase
+    .from("documents")
+    .select("landing_page")
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  const existingLanding = (existingData?.landing_page ?? {}) as Record<string, unknown>;
 
   const { error } = await supabase
     .from("documents")
-    .update(payload)
+    .update({ ...payload, landing_page: { ...existingLanding, ...viewerSettings } })
     .eq("id", documentId)
     .eq("organization_id", ctx.organizationId);
 
