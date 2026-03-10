@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createHash } from "crypto";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { submitIntake } from "@/app/s/[token]/actions";
@@ -134,12 +133,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
       const demoPages = typeof demoPagesRaw === "number" && demoPagesRaw > 0 ? demoPagesRaw : 12;
 
       return (
-        <PublicShell landing={demoLanding} title={demo.document.title}>
-          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
-            Demo mode: backend file preview and downloads are disabled.
-          </p>
-          <DocumentViewer title={demo.document.title} signedUrl={null} mode={demoMode} pageCount={demoPages} analytics={{ documentId: demo.document.id, shareToken: params.token }} />
-        </PublicShell>
+        <main className="min-h-screen bg-[#111] text-neutral-100">
+          <div className="border-b border-white/10 px-4 py-2 text-xs text-neutral-400">Demo mode · secure shared view</div>
+          <DocumentViewer title={demo.document.title} signedUrl={null} mode={demoMode} pageCount={demoPages} analytics={{ documentId: demo.document.id, shareToken: params.token }} immersive />
+        </main>
       );
     }
 
@@ -240,9 +237,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
     });
 
     return (
-      <PublicShell landing={landing} title={document.title}>
+      <main className="min-h-screen bg-[#111] text-neutral-100">
+        <div className="border-b border-white/10 px-4 py-2 text-xs text-neutral-400">Secure shared link</div>
         {searchParams?.submitted === "1" && intakeSettings.success_message ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{intakeSettings.success_message}</div>
+          <div className="mx-4 mt-3 rounded-lg border border-emerald-300/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{intakeSettings.success_message}</div>
         ) : null}
 
         <DocumentViewer
@@ -250,10 +248,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
           signedUrl={signedUrl?.signedUrl ?? null}
           mode={viewerMode}
           pageCount={viewerPageCount}
-          downloadHref={`/s/${params.token}/download/${document.id}`}
           analytics={{ documentId: document.id, shareToken: params.token }}
+          immersive
         />
-      </PublicShell>
+      </main>
     );
   }
 
@@ -286,9 +284,7 @@ export default async function PublicSharePage({ params, searchParams }: { params
           {docRows.filter(Boolean).map((doc) => (
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2" key={doc!.id}>
               <span className="font-medium">{doc!.title}</span>
-              <Link className="btn-secondary" href={`/s/${params.token}/download/${doc!.id}`}>
-                Open
-              </Link>
+              <span className="btn-secondary opacity-80">View only</span>
             </div>
           ))}
           {!docRows.some(Boolean) ? <p className="text-sm text-muted-foreground">No documents in this space.</p> : null}

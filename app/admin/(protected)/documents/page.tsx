@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { deleteDocument } from "@/app/admin/actions";
-import { CopyLinkButton } from "@/components/admin/copy-link-button";
 import { DeleteActionButton } from "@/components/admin/delete-action-button";
 import { requireAdminContext } from "@/lib/auth/server";
 import { ExternalLinkIcon, PencilIcon } from "@/components/ui/icons";
@@ -48,8 +47,7 @@ export default async function DocumentsPage() {
                 <th className="px-4 py-3">Title</th>
                 <th className="px-4 py-3">Viewer</th>
                 <th className="px-4 py-3">Size</th>
-                <th className="px-4 py-3">Visibility</th>
-                <th className="px-4 py-3">Created</th>
+                                <th className="px-4 py-3">Created</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
@@ -69,16 +67,14 @@ export default async function DocumentsPage() {
                       <div className="text-xs">{viewerMode === "deck" ? `${viewerPages} slides` : "scroll mode"}</div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(2)} MB` : "-"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{document.visibility ?? "private"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">
                         <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`} title="Create share link" aria-label="Create share link">
                           <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
                           <span>Share</span>
                         </Link>
-                        {document.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/d/${document.public_slug}`} label="Copy document URL" iconOnly /> : null}
-                        <Link className="btn-inline btn-inline-compact" href={`/admin/documents/${document.id}`} title="Edit document" aria-label="Edit document">
+                                                <Link className="btn-inline btn-inline-compact" href={`/admin/documents/${document.id}`} title="Edit document" aria-label="Edit document">
                           <PencilIcon className="h-3.5 w-3.5" aria-hidden="true" />
                           <span className="sr-only">Edit</span>
                         </Link>

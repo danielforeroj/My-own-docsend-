@@ -210,16 +210,11 @@ export function DocumentVisibilityForm({
 
   return (
     <form action={formAction} className="grid gap-4 md:grid-cols-2">
-      <div className="space-y-1">
-        <label className="label">Visibility</label>
-        <select name="visibility" defaultValue={document.visibility} className="w-full">
-          <option value="private">Private</option>
-          <option value="public">Public</option>
-        </select>
-      </div>
-      <div className="space-y-1">
-        <SlugField slugName="public_slug" slugInitial={document.public_slug ?? ""} sourceInitial={document.title} slugLabel="Public URL slug" routePrefix="/d" namespace="document" excludeId={document.id} />
-      </div>
+      <input type="hidden" name="visibility" value={document.visibility} />
+      <input type="hidden" name="public_slug" value={document.public_slug ?? ""} />
+      <input type="hidden" name="show_in_catalog" value={document.show_in_catalog ? "on" : ""} />
+      <input type="hidden" name="is_featured" value={document.is_featured ? "on" : ""} />
+
       <div className="space-y-1">
         <label className="label">Viewer mode</label>
         <select name="viewer_mode" defaultValue={landing.viewer_mode ?? "document"} className="w-full">
@@ -231,11 +226,8 @@ export function DocumentVisibilityForm({
         <label className="label">Viewer page count (for deck mode)</label>
         <input type="number" min={1} max={300} name="viewer_page_count" defaultValue={landing.viewer_page_count ?? 12} className="w-full" />
       </div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
-      <FormFieldError state={state} name="public_slug" />
       <ActionStateMessage state={state} />
-      <SubmitButton className="btn-primary md:col-span-2" idleLabel="Update visibility" pendingLabel="Updating visibility..." />
+      <SubmitButton className="btn-primary md:col-span-2" idleLabel="Save viewer settings" pendingLabel="Saving viewer settings..." />
     </form>
   );
 }

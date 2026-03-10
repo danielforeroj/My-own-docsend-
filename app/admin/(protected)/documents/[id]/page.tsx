@@ -4,30 +4,7 @@ import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
-import { DocumentLandingForm, DocumentVisibilityForm } from "@/components/admin/forms/admin-action-forms";
-import { CopyLinkButton } from "@/components/admin/copy-link-button";
-
-type LandingConfig = {
-  page_title?: string | null;
-  short_description?: string | null;
-  eyebrow?: string | null;
-  hero_image_url?: string | null;
-  logo_url?: string | null;
-  cta_label?: string | null;
-  cta_url?: string | null;
-  sidebar_info?: string | null;
-  disclaimer?: string | null;
-  highlights?: string[];
-  about?: string | null;
-  footer_text?: string | null;
-  layout_variant?: string;
-  show_disclaimer?: boolean;
-  show_sidebar?: boolean;
-  show_about?: boolean;
-  show_highlights?: boolean;
-  viewer_mode?: "deck" | "document";
-  viewer_page_count?: number;
-};
+import { DocumentVisibilityForm } from "@/components/admin/forms/admin-action-forms";
 
 export default async function DocumentDetailPage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
@@ -76,7 +53,8 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
   const adminSupabase = createAdminClient();
   const { data: signed } = await adminSupabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 30);
-  const landing = ((document.landing_page ?? {}) as LandingConfig) || {};
+
+  const landing = ((document.landing_page ?? {}) as { viewer_mode?: "deck" | "document"; viewer_page_count?: number }) || {};
 
   return (
     <div className="space-y-8">
@@ -102,19 +80,9 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
       ) : null}
 
       <section className="card p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="mb-1 text-lg font-semibold">Public visibility & URL</h2>
-            <p className="text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
-          </div>
-          {document.public_slug ? <CopyLinkButton path={`/d/${document.public_slug}`} label="Copy public URL" /> : null}
-        </div>
+        <h2 className="mb-1 text-lg font-semibold">Viewer settings</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Sharing is managed through Share Links. Configure only how this document is displayed to recipients.</p>
         <DocumentVisibilityForm document={document} landing={landing} />
-      </section>
-
-      <section className="card p-5">
-        <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>
-        <DocumentLandingForm documentId={document.id} landing={landing} />
       </section>
 
       <section className="card p-4">

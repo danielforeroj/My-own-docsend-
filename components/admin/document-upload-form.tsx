@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { normalizeSlug } from "@/lib/slug";
@@ -30,25 +30,15 @@ export function DocumentUploadForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [publicSlug, setPublicSlug] = useState("");
-  const [manualSlug, setManualSlug] = useState(false);
-  const [host, setHost] = useState("your-domain.com");
-  const [slugError, setSlugError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [viewerMode, setViewerMode] = useState<"deck" | "document">("document");
   const [derivedPageCount, setDerivedPageCount] = useState<number | null>(null);
   const [pageCountStatus, setPageCountStatus] = useState<"idle" | "deriving" | "ready" | "fallback">("idle");
   const [state, setState] = useState<UploadState>({ error: null, success: null, loading: false });
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setHost(window.location.host || "your-domain.com");
-    }
-  }, []);
-
   async function checkSlug(nextSlug: string) {
     const normalized = normalizeSlug(nextSlug);
     if (!normalized) {
-      setSlugError("Slug is required.");
       return false;
     }
 
@@ -56,10 +46,8 @@ export function DocumentUploadForm() {
     const payload = (await response.json()) as { available?: boolean; message?: string; normalizedSlug?: string };
     if (payload.normalizedSlug && payload.normalizedSlug !== publicSlug) setPublicSlug(payload.normalizedSlug);
     if (!payload.available) {
-      setSlugError(payload.message ?? "That slug is unavailable.");
       return false;
     }
-    setSlugError(null);
     return true;
   }
 
@@ -79,7 +67,7 @@ export function DocumentUploadForm() {
 
     const slugOk = await checkSlug(publicSlug);
     if (!slugOk) {
-      setState({ error: null, success: null, loading: false });
+      setState({ error: "Could not reserve a document URL slug.", success: null, loading: false });
       return;
     }
 
@@ -127,7 +115,6 @@ export function DocumentUploadForm() {
 
       setTitle("");
       setPublicSlug("");
-      setManualSlug(false);
       setFile(null);
       setDerivedPageCount(null);
       setPageCountStatus("idle");
@@ -149,35 +136,14 @@ export function DocumentUploadForm() {
           onChange={(event) => {
             const next = event.target.value;
             setTitle(next);
-            if (!manualSlug) setPublicSlug(normalizeSlug(next));
+            setPublicSlug(normalizeSlug(next));
           }}
           required
           className="w-full"
         />
       </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium">Public URL slug</label>
-          <span className="text-xs text-muted-foreground">{manualSlug ? "Manual" : "Auto-generated"}</span>
-        </div>
-        <input
-          value={publicSlug}
-          onChange={(event) => {
-            setManualSlug(true);
-            setPublicSlug(normalizeSlug(event.target.value));
-            setSlugError(null);
-          }}
-          onBlur={() => {
-            void checkSlug(publicSlug);
-          }}
-          required
-          pattern="[a-z0-9-]+"
-          title="Use lowercase letters, numbers, and hyphens"
-          className="w-full"
-          placeholder="my-custom-doc"
-        />
-        <p className="text-xs text-muted-foreground">Preview: https://{host}/d/{publicSlug || "my-custom-doc"}</p>
-        {slugError ? <p className="text-xs text-red-600 dark:text-red-300">{slugError}</p> : null}
+      <div className="space-y-2 rounded-xl border border-border bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+        Public URL customization is disabled. Sharing is handled through Share Links.
       </div>
       <div className="space-y-2">
         <label className="block text-sm font-medium">Viewer mode</label>
