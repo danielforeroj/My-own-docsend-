@@ -6,13 +6,19 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeSlug } from "@/lib/slug";
 
+type UploadOptions = {
+  normalizedSlug: string;
+  safeViewerMode: "deck" | "document";
+  safeViewerPageCount: number;
+};
+
 function parseUploadOptions(
   publicSlug: string | undefined,
   viewerMode: "deck" | "document" | undefined,
   viewerPageCount: number | undefined
-) {
+): UploadOptions {
   const normalizedSlug = normalizeSlug(String(publicSlug ?? ""));
-  const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+  const safeViewerMode: UploadOptions["safeViewerMode"] = viewerMode === "deck" ? "deck" : "document";
   const safeViewerPageCount = Number.isFinite(viewerPageCount)
     ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
     : 12;
@@ -26,6 +32,7 @@ export async function POST(request: Request) {
     if (!ctx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
     const { title, publicSlug, viewerMode, viewerPageCount, storagePath, fallbackFileSize, fallbackMimeType } = (await request.json()) as {
       title?: string;
       publicSlug?: string;
@@ -94,6 +101,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
     }
 
+    const slashIndex = storagePath.indexOf("/");
+    if (slashIndex <= 0 || slashIndex >= storagePath.length - 1) {
+      return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
+    }
+
+    const uploadOptions = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
+    if (!uploadOptions.normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
     const [folder, fileName] = storagePath.split(/\/(.+)/);
 
     const supabaseAdmin = createAdminClient();
@@ -118,7 +135,7 @@ export async function POST(request: Request) {
       .from("documents")
       .select("id")
       .eq("organization_id", ctx.organizationId)
-      .eq("public_slug", normalizedSlug)
+      .eq("public_slug", uploadOptions.normalizedSlug)
       .limit(1);
 
     if (duplicate?.length) {
@@ -129,8 +146,11 @@ export async function POST(request: Request) {
       organization_id: ctx.organizationId,
       uploaded_by: ctx.userId,
       title: title.trim(),
-      public_slug: normalizedSlug,
-      landing_page: { viewer_mode: safeViewerMode, viewer_page_count: safeViewerPageCount },
+      public_slug: uploadOptions.normalizedSlug,
+      landing_page: {
+        viewer_mode: uploadOptions.safeViewerMode,
+        viewer_page_count: uploadOptions.safeViewerPageCount
+      },
       storage_path: storagePath,
       file_size: fileSize,
       mime_type: mimeType
