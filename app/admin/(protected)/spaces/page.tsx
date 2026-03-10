@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CopyLinkButton } from "@/components/admin/copy-link-button";
 import { requireAdminContext } from "@/lib/auth/server";
+import { PencilIcon } from "@/components/ui/icons";
 import { getSpacesData } from "@/lib/data/repository";
 
 export default async function SpacesPage() {
@@ -48,7 +49,7 @@ export default async function SpacesPage() {
                   <td className="px-4 py-3 text-muted-foreground">{space.public_slug ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{space.visibility ?? "private"}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{space.is_active ? "Active" : "Inactive"}</span></td>
-                  <td className="px-4 py-3"><div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">{space.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/sp/${space.public_slug}`} label="Copy space URL" /> : null}<Link className="btn-inline btn-inline-compact" href={`/admin/spaces/${space.id}/edit`}>Edit space</Link></div></td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">{space.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/sp/${space.public_slug}`} label="Copy space URL" iconOnly /> : null}<Link className="btn-inline btn-inline-compact" href={`/admin/spaces/${space.id}/edit`} title="Edit space" aria-label="Edit space"><PencilIcon className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only">Edit space</span></Link></div></td>
                 </tr>
               ))}
             </tbody>
