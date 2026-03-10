@@ -39,6 +39,44 @@ export async function POST(request: Request) {
     if (!storagePath?.startsWith(`${ctx.organizationId}/`)) {
       return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
     }
+    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
+    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+    const safeViewerPageCount = Number.isFinite(viewerPageCount)
+      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
+      : 12;
+
+    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
+    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+    const safeViewerPageCount = Number.isFinite(viewerPageCount)
+      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
+      : 12;
+
+    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
+    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+    const safeViewerPageCount = Number.isFinite(viewerPageCount)
+      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
+      : 12;
+
+    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
 
     const { normalizedSlug, safeViewerMode, safeViewerPageCount } = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
 
