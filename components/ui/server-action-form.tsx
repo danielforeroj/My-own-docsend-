@@ -26,7 +26,7 @@ export function ServerActionForm({
 }: {
   action: (prevState: ActionFormState, formData: FormData) => Promise<ActionFormState>;
   className?: string;
-  children: React.ReactNode | ((state: ActionFormState) => React.ReactNode);
+  children: React.ReactNode;
   idleLabel: string;
   pendingLabel: string;
   submitClassName?: string;
@@ -35,7 +35,7 @@ export function ServerActionForm({
 
   return (
     <form action={formAction} className={className}>
-      {typeof children === "function" ? children(state) : children}
+      {children}
       {state.message ? (
         <p className={`rounded-lg px-3 py-2 text-sm ${state.ok ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : "border border-red-400/30 bg-red-500/10 text-red-300"}`}>
           {state.message}

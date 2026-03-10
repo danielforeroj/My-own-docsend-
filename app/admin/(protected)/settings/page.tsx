@@ -1,5 +1,4 @@
-import { createEmployeeUserActionState } from "@/app/admin/actions";
-import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
+import { CreateEmployeeUserForm } from "@/components/admin/forms/admin-action-forms";
 import { requireAdminContext } from "@/lib/auth/server";
 import { getSettingsData } from "@/lib/data/repository";
 import { isResendConfigured } from "@/lib/runtime";
@@ -25,34 +24,7 @@ export default async function SettingsPage() {
         <section className="card p-5">
           <h2 className="mb-1 font-semibold">Create employee user</h2>
           <p className="mb-3 text-sm text-muted-foreground">Creates auth user access and syncs profile + membership for this organization.</p>
-          <ServerActionForm action={createEmployeeUserActionState} className="grid gap-3 md:grid-cols-2" idleLabel="Create user" pendingLabel="Creating user..." submitClassName="btn-primary md:col-span-2">
-            {(state) => (
-              <>
-                <div className="space-y-1 md:col-span-2">
-                  <label className="label">Full name</label>
-                  <input name="full_name" type="text" className="w-full" required />
-                  <FormFieldError state={state} name="full_name" />
-                </div>
-                <div className="space-y-1">
-                  <label className="label">Email</label>
-                  <input name="email" type="email" className="w-full" required />
-                  <FormFieldError state={state} name="email" />
-                </div>
-                <div className="space-y-1">
-                  <label className="label">Temporary password</label>
-                  <input name="password" type="password" minLength={8} className="w-full" required />
-                  <FormFieldError state={state} name="password" />
-                </div>
-                <div className="space-y-1 md:col-span-2">
-                  <label className="label">Role</label>
-                  <select name="role" defaultValue="admin" className="w-full">
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super admin</option>
-                  </select>
-                </div>
-              </>
-            )}
-          </ServerActionForm>
+          <CreateEmployeeUserForm />
         </section>
       ) : null}
 
