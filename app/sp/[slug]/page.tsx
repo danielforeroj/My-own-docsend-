@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPublicSpaceBySlug } from "@/lib/data/repository";
 import { PublicShell, type LandingConfig } from "@/components/public/public-shell";
+import { SpaceViewTracker } from "@/components/public/space-view-tracker";
 
 export default async function PublicSpacePage({ params }: { params: { slug: string } }) {
   const result = await getPublicSpaceBySlug(params.slug);
@@ -18,6 +19,7 @@ export default async function PublicSpacePage({ params }: { params: { slug: stri
 
   return (
     <PublicShell landing={landing} title={space.name} description={space.description}>
+      <SpaceViewTracker spaceSlug={params.slug} />
       <section className="space-y-3 rounded-xl border border-border bg-background p-4">
         <h2 className="text-lg font-semibold">Documents in this Space</h2>
         {docs.map((doc) => (
