@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { CopyLinkButton } from "@/components/admin/copy-link-button";
 import { requireAdminContext } from "@/lib/auth/server";
+import { PencilIcon } from "@/components/ui/icons";
 import { getSpacesData } from "@/lib/data/repository";
 
 export default async function SpacesPage() {
@@ -17,7 +19,6 @@ export default async function SpacesPage() {
         </div>
         {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">Create space (Demo mode)</span> : <Link href="/admin/spaces/new" className="btn-primary inline-flex items-center justify-center">Create space</Link>}
       </div>
-
 
       {error ? (
         <section className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
@@ -39,16 +40,16 @@ export default async function SpacesPage() {
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-[720px] w-full text-left text-sm">
-            <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Slug</th><th className="px-4 py-3">Visibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
+          <table className="min-w-[820px] w-full text-left text-sm">
+            <thead className="border-b border-border bg-background text-muted-foreground"><tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Public URL slug</th><th className="px-4 py-3">Visibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
             <tbody>
-              {spaces.map((space: { id: string; name: string; slug: string; is_active: boolean; visibility?: string }) => (
+              {spaces.map((space: { id: string; name: string; is_active: boolean; visibility?: string; public_slug?: string | null }) => (
                 <tr key={space.id} className="border-b border-border last:border-b-0">
                   <td className="px-4 py-3"><Link className="font-medium hover:underline" href={`/admin/spaces/${space.id}`}>{space.name}</Link></td>
-                  <td className="px-4 py-3 text-muted-foreground">{space.slug}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{space.public_slug ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{space.visibility ?? "private"}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{space.is_active ? "Active" : "Inactive"}</span></td>
-                  <td className="px-4 py-3"><div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2"><Link className="btn-inline btn-inline-compact" href={`/admin/spaces/${space.id}/edit`}>Edit space</Link></div></td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">{space.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/sp/${space.public_slug}`} label="Copy space URL" iconOnly /> : null}<Link className="btn-inline btn-inline-compact" href={`/admin/spaces/${space.id}/edit`} title="Edit space" aria-label="Edit space"><PencilIcon className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only">Edit space</span></Link></div></td>
                 </tr>
               ))}
             </tbody>

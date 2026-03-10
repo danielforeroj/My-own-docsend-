@@ -93,12 +93,17 @@ async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: {
   const headerStore = await headers();
   const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const userAgent = headerStore.get("user-agent") || "unknown";
-  const fingerprint = createHash("sha256").update(`${linkId}:${forwardedFor}:${userAgent}`).digest("hex");
+  const country = headerStore.get("x-vercel-ip-country") || headerStore.get("cf-ipcountry") || "unknown";
+  const region = headerStore.get("x-vercel-ip-country-region") || headerStore.get("x-vercel-region") || "unknown";
+  const city = headerStore.get("x-vercel-ip-city") || "unknown";
+  const device = /mobile/i.test(userAgent) ? "mobile" : /tablet|ipad/i.test(userAgent) ? "tablet" : "desktop";
+  const fingerprintHash = createHash("sha256").update(`${linkId}:${forwardedFor}:${userAgent}`).digest("hex");
+  const fingerprint = `${fingerprintHash}|${country}|${region}|${city}|${device}`;
 
   const query = supabase
     .from("view_sessions")
     .select("id")
-    .eq("viewer_fingerprint", fingerprint)
+    .like("viewer_fingerprint", `${fingerprintHash}|%`)
     .gte("created_at", new Date(Date.now() - 1000 * 60 * 30).toISOString())
     .limit(1);
 
@@ -111,7 +116,8 @@ async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: {
     document_id: documentId,
     visitor_submission_id: visitorSubmissionId,
     viewer_fingerprint: fingerprint,
-    started_at: new Date().toISOString()
+    started_at: new Date().toISOString(),
+    ended_at: null
   });
 }
 

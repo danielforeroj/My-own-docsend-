@@ -45,6 +45,12 @@ function shouldDisableMutations() {
   return isDemoMode() || !isSupabaseConfigured();
 }
 
+function getAdminMutationClientOrThrow(preferAdmin = true) {
+  const admin = createAdminClientOrNull() as any;
+  if (preferAdmin && admin) return admin;
+  return null;
+}
+
 type AllowedFieldType = "text" | "email" | "phone" | "textarea" | "select" | "checkbox";
 const ALLOWED_FIELD_TYPES = new Set<AllowedFieldType>(["text", "email", "phone", "textarea", "select", "checkbox"]);
 
@@ -245,8 +251,10 @@ export async function createSpace(formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = createAdminClientOrNull() as any;
-  if (!supabase) throw new Error("Supabase admin client is not configured.");
+  const supabase = getAdminMutationClientOrThrow();
+  const userScopedSupabase = (await createClientOrNull()) as any;
+  const db = supabase ?? userScopedSupabase;
+  if (!db) throw new Error("Could not initialize a database client for space creation.");
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -261,16 +269,17 @@ export async function createSpace(formData: FormData) {
     });
   }
 
-  const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
-  await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug });
+  await ensureUniquePublicSlug({ supabase: db, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug });
 
-  const { data: space, error: spaceError } = await supabase
+  const internalSlug = `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const { data: space, error: spaceError } = await db
     .from("spaces")
     .insert({
       organization_id: ctx.organizationId,
       created_by: ctx.userId,
       name,
-      slug,
+      slug: internalSlug,
       description: description || null,
       public_slug: publicSlug
     })
@@ -281,7 +290,7 @@ export async function createSpace(formData: FormData) {
 
   if (documentIds.length > 0) {
     const uniqueDocumentIds = Array.from(new Set(documentIds));
-    const { data: existingDocs, error: docsError } = await supabase
+    const { data: existingDocs, error: docsError } = await db
       .from("documents")
       .select("id")
       .eq("organization_id", ctx.organizationId)
@@ -294,7 +303,7 @@ export async function createSpace(formData: FormData) {
       });
     }
 
-    const { error: joinError } = await supabase.from("space_documents").insert(
+    const { error: joinError } = await db.from("space_documents").insert(
       uniqueDocumentIds.map((documentId, index) => ({ space_id: space.id, document_id: documentId, position: index }))
     );
     if (joinError) throw new Error(joinError.message);
@@ -310,8 +319,10 @@ export async function updateSpace(spaceId: string, formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = createAdminClientOrNull() as any;
-  if (!supabase) throw new Error("Supabase admin client is not configured.");
+  const supabase = getAdminMutationClientOrThrow();
+  const userScopedSupabase = (await createClientOrNull()) as any;
+  const db = supabase ?? userScopedSupabase;
+  if (!db) throw new Error("Could not initialize a database client for space update.");
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -327,9 +338,9 @@ export async function updateSpace(spaceId: string, formData: FormData) {
     });
   }
 
-  await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug, excludeId: spaceId });
+  await ensureUniquePublicSlug({ supabase: db, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug, excludeId: spaceId });
 
-  const { data: ownedSpace, error: ownedSpaceError } = await supabase
+  const { data: ownedSpace, error: ownedSpaceError } = await db
     .from("spaces")
     .select("id")
     .eq("id", spaceId)
@@ -338,19 +349,19 @@ export async function updateSpace(spaceId: string, formData: FormData) {
   if (ownedSpaceError) throw new Error(ownedSpaceError.message);
   if (!ownedSpace) throw new Error("Space not found.");
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await db
     .from("spaces")
     .update({ name, description: description || null, public_slug: publicSlug, is_active: active, updated_at: new Date().toISOString() })
     .eq("id", spaceId)
     .eq("organization_id", ctx.organizationId);
   if (updateError) throw new Error(updateError.message);
 
-  const { error: deleteError } = await supabase.from("space_documents").delete().eq("space_id", spaceId);
+  const { error: deleteError } = await db.from("space_documents").delete().eq("space_id", spaceId);
   if (deleteError) throw new Error(deleteError.message);
 
   if (documentIds.length > 0) {
     const uniqueDocumentIds = Array.from(new Set(documentIds));
-    const { data: existingDocs, error: docsError } = await supabase
+    const { data: existingDocs, error: docsError } = await db
       .from("documents")
       .select("id")
       .eq("organization_id", ctx.organizationId)
@@ -363,7 +374,7 @@ export async function updateSpace(spaceId: string, formData: FormData) {
       });
     }
 
-    const { error: joinError } = await supabase.from("space_documents").insert(
+    const { error: joinError } = await db.from("space_documents").insert(
       uniqueDocumentIds.map((documentId, index) => ({ space_id: spaceId, document_id: documentId, position: index }))
     );
     if (joinError) throw new Error(joinError.message);
@@ -379,7 +390,7 @@ export async function createShareLink(formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const targetType = String(formData.get("target_type") || "");
@@ -436,9 +447,18 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
     return;
   }
 
-  await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const ctx = await requireAdminContext();
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
+
+  const { data: ownedLink, error: ownedLinkError } = await supabase
+    .from("share_links")
+    .select("id")
+    .eq("id", shareLinkId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  if (ownedLinkError) throw new Error(ownedLinkError.message);
+  if (!ownedLink) throw new Error("Share link not found.");
 
   const name = String(formData.get("name") || "").trim();
   const requiresIntake = formData.get("requires_intake") === "on";
@@ -476,7 +496,7 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
@@ -498,7 +518,9 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/documents/${documentId}`);
+  revalidatePath("/admin/documents");
 }
+
 
 export async function updateSpaceLanding(spaceId: string, formData: FormData) {
   if (shouldDisableMutations()) {
@@ -507,20 +529,31 @@ export async function updateSpaceLanding(spaceId: string, formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
 
+  const { data: existingData } = await supabase
+    .from("spaces")
+    .select("landing_page")
+    .eq("id", spaceId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  const existingLanding = (existingData?.landing_page ?? {}) as Record<string, unknown>;
+
   const { error } = await supabase
     .from("spaces")
-    .update({ landing_page: landingPage, updated_at: new Date().toISOString() })
+    .update({ landing_page: { ...existingLanding, ...landingPage }, updated_at: new Date().toISOString() })
     .eq("id", spaceId)
     .eq("organization_id", ctx.organizationId);
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+  revalidatePath("/admin/spaces");
 }
+
 
 
 export async function updateDocumentVisibility(documentId: string, formData: FormData) {
@@ -530,7 +563,7 @@ export async function updateDocumentVisibility(documentId: string, formData: For
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
@@ -554,7 +587,9 @@ export async function updateDocumentVisibility(documentId: string, formData: For
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/documents/${documentId}`);
+  revalidatePath("/admin/documents");
 }
+
 
 export async function updateSpaceVisibility(spaceId: string, formData: FormData) {
   if (shouldDisableMutations()) {
@@ -577,7 +612,9 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+  revalidatePath("/admin/spaces");
 }
+
 
 
 
@@ -597,12 +634,19 @@ export async function createEmployeeUser(formData: FormData) {
 
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "").trim();
+  const fullName = String(formData.get("full_name") || "").trim();
   const roleRaw = String(formData.get("role") || "admin").trim();
   const role = roleRaw === "super_admin" ? "super_admin" : "admin";
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     throw new AdminFormError("Please fix the highlighted fields.", {
       email: ["A valid email is required."]
+    });
+  }
+
+  if (!fullName) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      full_name: ["Full name is required."]
     });
   }
 
@@ -621,14 +665,39 @@ export async function createEmployeeUser(formData: FormData) {
     throw new Error(userError?.message ?? "Failed to create user.");
   }
 
-  const { error: membershipError } = await supabase.from("memberships").insert({
-    organization_id: ctx.organizationId,
-    user_id: createdUser.user.id,
-    role
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: createdUser.user.id,
+    full_name: fullName,
+    updated_at: new Date().toISOString()
   });
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
 
-  if (membershipError) {
-    throw new Error(membershipError.message);
+  const { data: existingMembership, error: membershipLookupError } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("organization_id", ctx.organizationId)
+    .eq("user_id", createdUser.user.id)
+    .maybeSingle();
+
+  if (membershipLookupError) {
+    throw new Error(membershipLookupError.message);
+  }
+
+  const membershipMutation = existingMembership
+    ? await supabase
+        .from("memberships")
+        .update({ role })
+        .eq("id", existingMembership.id)
+    : await supabase.from("memberships").insert({
+        organization_id: ctx.organizationId,
+        user_id: createdUser.user.id,
+        role
+      });
+
+  if (membershipMutation.error) {
+    throw new Error(membershipMutation.error.message);
   }
 
   revalidatePath("/admin/settings");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MoonIcon, SunIcon } from "@/components/ui/icons";
 
 type Theme = "light" | "dark";
 
@@ -15,7 +16,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [theme, setTheme] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
@@ -48,10 +49,11 @@ export function ThemeToggle() {
   };
 
   if (!mounted) {
-    return <div className="h-9 w-9" aria-hidden="true" />;
+    return <div className={compact ? "h-8 w-8" : "h-9 w-28"} aria-hidden="true" />;
   }
 
-  const label = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  const isDark = theme === "dark";
+  const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   return (
     <button
@@ -59,9 +61,12 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className="btn-ghost h-9 w-9 p-0"
+      className={compact ? "btn-inline btn-inline-compact p-0 w-8" : "btn-inline btn-inline-compact"}
     >
-      <span aria-hidden="true" className="text-base leading-none">{theme === "dark" ? "☀️" : "🌙"}</span>
+      <span aria-hidden="true" className="inline-flex h-4 w-4 items-center justify-center">
+        {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+      </span>
+      {compact ? <span className="sr-only">{label}</span> : <span>{isDark ? "Light" : "Dark"} mode</span>}
     </button>
   );
 }
