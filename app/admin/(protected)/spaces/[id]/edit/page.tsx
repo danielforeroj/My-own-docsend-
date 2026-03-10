@@ -2,17 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateSpaceActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { createClientOrNull } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
 import { SlugField } from "@/components/admin/slug-field";
 import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 
 export default async function EditSpacePage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
-  const supabase = createAdminClientOrNull();
+  const supabase = await createClientOrNull();
 
   if (!supabase) {
-    throw new Error("Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.");
+    throw new Error("Could not initialize Supabase server client.");
   }
 
   const [{ data: spaceData, error: spaceError }, { data: documentsData, error: documentsError }, { data: selectedData, error: selectedError }] = await Promise.all([

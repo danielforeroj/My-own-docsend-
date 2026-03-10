@@ -1,20 +1,20 @@
 import Link from "next/link";
 import { createSpaceActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { createClientOrNull } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
 import { SlugField } from "@/components/admin/slug-field";
 import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 
 export default async function NewSpacePage() {
   const ctx = await requireAdminContext();
-  const supabase = createAdminClientOrNull();
+  const supabase = await createClientOrNull();
 
   let documents: Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">> = [];
   let documentsError: string | null = null;
 
   if (!supabase) {
-    documentsError = "Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.";
+    documentsError = "Could not initialize Supabase server client.";
   } else {
     const { data: documentRows, error } = await supabase
       .from("documents")

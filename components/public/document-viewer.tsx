@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ExternalLinkIcon } from "@/components/ui/icons";
 
 type ViewerMode = "deck" | "document";
 
@@ -53,6 +54,41 @@ export function DocumentViewer({
   }, [mode, totalPages]);
 
   useEffect(() => {
+    if (!analytics) return;
+
+    fetch("/api/viewer-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        documentId: analytics.documentId,
+        shareToken: analytics.shareToken ?? null,
+        page: 1,
+        mode,
+        event: "view_start"
+      })
+    }).catch(() => {
+      // non-blocking analytics
+    });
+
+    return () => {
+      void fetch("/api/viewer-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          documentId: analytics.documentId,
+          shareToken: analytics.shareToken ?? null,
+          page: 1,
+          mode,
+          event: "view_end"
+        })
+      }).catch(() => {
+        // non-blocking analytics
+      });
+    };
+  }, [analytics, mode]);
+
+  useEffect(() => {
     if (mode !== "deck" || !analytics) return;
 
     fetch("/api/viewer-events", {
@@ -87,21 +123,33 @@ export function DocumentViewer({
     setCurrentPage(Math.min(totalPages, Math.max(1, Math.round(value))));
   };
 
+  const modeTitle = mode === "deck" ? "Deck mode" : "Document mode";
+  const modeDescription =
+    mode === "deck"
+      ? "Slide-by-slide controls are enabled. Use arrows or jump to any slide."
+      : "Continuous reading view for reports and long-form documents.";
+
   return (
     <section className="rounded-2xl border border-border bg-card shadow-sm">
       <header className="border-b border-border px-4 py-3 md:px-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">Secure viewer</p>
             <h2 className="mt-0.5 text-lg font-semibold">{title}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{modeTitle}: {modeDescription}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-              {mode === "deck" ? "Page-by-page" : "Continuous document"}
+            <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              {mode === "deck" ? `Deck · ${totalPages} slides` : "Document · Continuous scroll"}
             </span>
             {downloadHref ? <Link className="btn-secondary" href={downloadHref}>Download PDF</Link> : null}
-            {signedUrl ? <Link className="btn-inline" href={signedUrl} target="_blank">Open original</Link> : null}
+            {signedUrl ? (
+              <Link className="btn-inline" href={signedUrl} target="_blank" title="Open original PDF" aria-label="Open original PDF">
+                <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Open original</span>
+              </Link>
+            ) : null}
           </div>
         </div>
       </header>
@@ -157,7 +205,7 @@ export function DocumentViewer({
       ) : (
         <div className="space-y-3 p-3 md:p-4">
           <div className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-            Continuous reading mode — best for reports and long-form documents.
+            Reading mode: all pages are in one continuous stream for easier scanning and search.
           </div>
           <div className="overflow-hidden rounded-xl border border-border bg-background p-2 md:p-3">
             {iframeSrc ? <iframe title={title} src={iframeSrc} className="h-[82vh] w-full rounded-lg" /> : <p className="p-4 text-sm text-muted-foreground">Unable to load document preview.</p>}

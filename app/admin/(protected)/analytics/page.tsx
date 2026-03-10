@@ -31,6 +31,7 @@ export default async function AnalyticsPage() {
               <span className="text-muted-foreground">Downloads: {item.downloads}</span>
             </div>
           ))}
+          {!data.perDocument.length ? <p className="px-4 py-3 text-sm text-muted-foreground">No document views yet.</p> : null}
         </div>
       </section>
 
@@ -44,18 +45,40 @@ export default async function AnalyticsPage() {
               <span className="text-muted-foreground">Submissions: {item.submissions}</span>
             </div>
           ))}
+          {!data.perSpace.length ? <p className="px-4 py-3 text-sm text-muted-foreground">No space views yet.</p> : null}
         </div>
       </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Recent visits</h2>
         <div className="card overflow-hidden">
-          {data.totals.recentVisits.map((visit: { id: string; documentId: string | null; spaceId: string | null; createdAt: string }) => (
+          {data.totals.recentVisits.map((visit: {
+            id: string;
+            documentId: string | null;
+            spaceId: string | null;
+            targetLabel?: string;
+            createdAt: string;
+            durationSeconds?: number | null;
+            country?: string;
+            region?: string;
+            city?: string;
+            device?: string;
+          }) => (
             <div className="border-b border-border px-4 py-3 text-sm last:border-b-0" key={visit.id}>
-              {visit.documentId ? `Document ${visit.documentId}` : `Space ${visit.spaceId ?? "unknown"}`}
-              <div className="text-xs text-muted-foreground">{new Date(visit.createdAt).toLocaleString()}</div>
+              <p className="font-medium">{visit.targetLabel ?? (visit.documentId ? `Document ${visit.documentId}` : `Space ${visit.spaceId ?? "unknown"}`)}</p>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>{new Date(visit.createdAt).toLocaleString()}</span>
+                <span>
+                  {visit.city && visit.city !== "unknown" ? visit.city : "Unknown city"}
+                  {visit.region && visit.region !== "unknown" ? `, ${visit.region}` : ""}
+                  {visit.country && visit.country !== "unknown" ? ` (${visit.country})` : ""}
+                </span>
+                <span>Device: {visit.device ?? "unknown"}</span>
+                <span>Time spent: {visit.durationSeconds != null ? `${visit.durationSeconds}s` : "in progress"}</span>
+              </div>
             </div>
           ))}
+          {!data.totals.recentVisits.length ? <p className="px-4 py-3 text-sm text-muted-foreground">No visits tracked yet.</p> : null}
         </div>
       </section>
     </div>

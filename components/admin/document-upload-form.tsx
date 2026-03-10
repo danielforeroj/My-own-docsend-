@@ -11,6 +11,21 @@ type UploadState = {
   loading: boolean;
 };
 
+async function derivePdfPageCount(file: File): Promise<number | null> {
+  try {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const text = new TextDecoder("latin1").decode(bytes);
+    const matches = text.match(/\/Type\s*\/Page\b/g) ?? [];
+    if (matches.length > 0) {
+      return Math.min(300, Math.max(1, matches.length));
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function DocumentUploadForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -20,9 +35,9 @@ export function DocumentUploadForm() {
   const [slugError, setSlugError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [viewerMode, setViewerMode] = useState<"deck" | "document">("document");
-  const [viewerPageCount, setViewerPageCount] = useState(12);
+  const [derivedPageCount, setDerivedPageCount] = useState<number | null>(null);
+  const [pageCountStatus, setPageCountStatus] = useState<"idle" | "deriving" | "ready" | "fallback">("idle");
   const [state, setState] = useState<UploadState>({ error: null, success: null, loading: false });
-
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -68,6 +83,8 @@ export function DocumentUploadForm() {
       return;
     }
 
+    const safeViewerPageCount = derivedPageCount ?? 12;
+
     try {
       const uploadUrlResponse = await fetch("/api/admin/documents/upload-url", {
         method: "POST",
@@ -96,7 +113,7 @@ export function DocumentUploadForm() {
           title: title.trim(),
           publicSlug: publicSlug.trim(),
           viewerMode,
-          viewerPageCount,
+          viewerPageCount: safeViewerPageCount,
           storagePath: uploadData.path,
           fallbackFileSize: file.size,
           fallbackMimeType: file.type
@@ -112,6 +129,8 @@ export function DocumentUploadForm() {
       setPublicSlug("");
       setManualSlug(false);
       setFile(null);
+      setDerivedPageCount(null);
+      setPageCountStatus("idle");
       setState({ error: null, success: "Upload complete.", loading: false });
       router.push("/admin/documents");
       router.refresh();
@@ -166,21 +185,12 @@ export function DocumentUploadForm() {
           <option value="document">Document (continuous scroll)</option>
           <option value="deck">Deck (page-by-page)</option>
         </select>
+        <p className="text-xs text-muted-foreground">
+          {viewerMode === "deck"
+            ? `Deck navigation will use ${derivedPageCount ?? 12} pages (${pageCountStatus === "ready" ? "auto-detected" : "fallback"}).`
+            : "Document mode uses continuous scrolling."}
+        </p>
       </div>
-      {viewerMode === "deck" ? (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Page count (for deck mode)</label>
-          <input
-            type="number"
-            min={1}
-            max={300}
-            value={viewerPageCount}
-            onChange={(event) => setViewerPageCount(Math.max(1, Math.min(300, Number(event.target.value) || 1)))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">Used to power page-by-page navigation and progress indicators.</p>
-        </div>
-      ) : null}
       <div className="space-y-2">
         <label className="block text-sm font-medium">PDF file</label>
         <input
@@ -189,8 +199,27 @@ export function DocumentUploadForm() {
           accept="application/pdf"
           required
           className="w-full"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          onChange={async (event) => {
+            const nextFile = event.target.files?.[0] ?? null;
+            setFile(nextFile);
+            setDerivedPageCount(null);
+            if (!nextFile) {
+              setPageCountStatus("idle");
+              return;
+            }
+
+            setPageCountStatus("deriving");
+            const count = await derivePdfPageCount(nextFile);
+            if (count && Number.isFinite(count)) {
+              setDerivedPageCount(count);
+              setPageCountStatus("ready");
+            } else {
+              setDerivedPageCount(12);
+              setPageCountStatus("fallback");
+            }
+          }}
         />
+        {pageCountStatus === "deriving" ? <p className="text-xs text-muted-foreground">Analyzing PDF pages…</p> : null}
       </div>
 
       {state.error ? <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{state.error}</p> : null}
