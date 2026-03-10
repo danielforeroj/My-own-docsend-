@@ -111,7 +111,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
     }
 
+    const slashIndex = storagePath.indexOf("/");
+    if (slashIndex <= 0 || slashIndex >= storagePath.length - 1) {
+      return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
+    }
+
+    const uploadOptions = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
+    if (!uploadOptions.normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
     const [folder, fileName] = storagePath.split(/\/(.+)/);
+    if (!folder || !fileName) {
+      return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
+    }
 
     const supabaseAdmin = createAdminClient();
     const { data: objects, error: listError } = await supabaseAdmin.storage.from("documents").list(folder, { search: fileName, limit: 1 });
