@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClientOrNull } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, createAdminClientOrNull } from "@/lib/supabase/admin";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 import { mockAnalyticsSummary, mockBrandingSettings, mockDocuments, mockShareLinks, mockSpaces } from "@/lib/data/mock";
 import type { Database } from "@/lib/db/types";
@@ -76,13 +76,24 @@ export async function getSpacesData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      spaces: mockSpaces.map((s) => ({ id: s.id, name: s.name, slug: s.slug, is_active: s.isActive, created_at: s.createdAt, visibility: s.visibility, public_slug: s.publicSlug, show_in_catalog: s.showInCatalog, is_featured: s.isFeatured }))
+      spaces: mockSpaces.map((s) => ({ id: s.id, name: s.name, slug: s.slug, is_active: s.isActive, created_at: s.createdAt, visibility: s.visibility, public_slug: s.publicSlug, show_in_catalog: s.showInCatalog, is_featured: s.isFeatured })),
+      error: null as string | null
     };
   }
-  const supabase = await createClientOrNull();
-  if (!supabase) return { source: "demo" as const, spaces: [] };
-  const { data } = await supabase.from("spaces").select("id, name, slug, is_active, created_at, visibility, public_slug, show_in_catalog, is_featured").eq("organization_id", organizationId).order("created_at", { ascending: false });
-  return { source: "supabase" as const, spaces: data ?? [] };
+  const supabase = createAdminClientOrNull();
+  if (!supabase) return { source: "supabase" as const, spaces: [], error: "Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY." };
+
+  const { data, error } = await supabase
+    .from("spaces")
+    .select("id, name, slug, is_active, created_at, visibility, public_slug, show_in_catalog, is_featured")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  return {
+    source: "supabase" as const,
+    spaces: data ?? [],
+    error: error ? `${error.message}${error.code ? ` (code: ${error.code})` : ""}` : null
+  };
 }
 
 export async function getShareLinksData(organizationId: string) {

@@ -4,7 +4,7 @@ import { getSpacesData } from "@/lib/data/repository";
 
 export default async function SpacesPage() {
   const ctx = await requireAdminContext();
-  const { source, spaces } = await getSpacesData(ctx.organizationId);
+  const { source, spaces, error } = await getSpacesData(ctx.organizationId);
 
   return (
     <div className="space-y-6">
@@ -17,6 +17,15 @@ export default async function SpacesPage() {
         </div>
         {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">Create space (Demo mode)</span> : <Link href="/admin/spaces/new" className="btn-primary inline-flex items-center justify-center">Create space</Link>}
       </div>
+
+
+      {error ? (
+        <section className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+          <h2 className="font-semibold text-red-300">Could not load spaces from Supabase</h2>
+          <p className="mt-1 text-sm text-red-200">The spaces query failed. Check admin Supabase configuration and database permissions.</p>
+          <p className="mt-2 text-xs text-red-200/90">Details: {error}</p>
+        </section>
+      ) : null}
 
       {source === "supabase" && spaces.length === 0 ? (
         <section className="card p-4">

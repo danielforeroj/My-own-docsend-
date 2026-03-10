@@ -46,6 +46,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
     }
 
+    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+    const safeViewerPageCount = Number.isFinite(viewerPageCount)
+      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
+      : 12;
+
+    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
     const [folder, fileName] = storagePath.split(/\/(.+)/);
 
     const supabaseAdmin = createAdminClient();

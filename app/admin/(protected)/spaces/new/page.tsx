@@ -1,22 +1,33 @@
 import Link from "next/link";
 import { createSpaceActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
 import { SlugField } from "@/components/admin/slug-field";
 import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 
 export default async function NewSpacePage() {
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = createAdminClientOrNull();
 
-  const { data: documentRows } = await supabase
-    .from("documents")
-    .select("id, title")
-    .eq("organization_id", ctx.organizationId)
-    .order("created_at", { ascending: false });
+  let documents: Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">> = [];
+  let documentsError: string | null = null;
 
-  const documents = (documentRows ?? []) as Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">>;
+  if (!supabase) {
+    documentsError = "Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.";
+  } else {
+    const { data: documentRows, error } = await supabase
+      .from("documents")
+      .select("id, title")
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      documentsError = `${error.message}${error.code ? ` (code: ${error.code})` : ""}`;
+    }
+
+    documents = (documentRows ?? []) as Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">>;
+  }
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -45,9 +56,11 @@ export default async function NewSpacePage() {
                     <input type="checkbox" name="document_ids" value={document.id} /> {document.title}
                   </label>
                 ))}
-                {!documents.length ? <p className="text-sm text-muted-foreground">No documents uploaded yet.</p> : null}
+                {documentsError ? <p className="text-sm text-red-300">Could not load documents: {documentsError}</p> : null}
+                {!documents.length && !documentsError ? <p className="text-sm text-muted-foreground">No documents uploaded yet.</p> : null}
               </div>
             </div>
+            <FormFieldError state={state} name="document_ids" />
           </>
         )}
       </ServerActionForm>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateSpaceLandingActionState, updateSpaceVisibilityActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
 import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 import { SlugField } from "@/components/admin/slug-field";
@@ -29,7 +29,8 @@ type LandingConfig = {
 
 export default async function SpaceDetailPage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = createAdminClientOrNull();
+  if (!supabase) throw new Error("Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.");
 
   const { data: spaceData } = await supabase
     .from("spaces")

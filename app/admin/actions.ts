@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClientOrNull } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 import { normalizeSlug } from "@/lib/slug";
 
@@ -244,8 +245,8 @@ export async function createSpace(formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
-  if (!supabase) return;
+  const supabase = createAdminClientOrNull() as any;
+  if (!supabase) throw new Error("Supabase admin client is not configured.");
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -279,8 +280,22 @@ export async function createSpace(formData: FormData) {
   if (spaceError || !space) throw new Error(spaceError?.message ?? "Failed to create space");
 
   if (documentIds.length > 0) {
+    const uniqueDocumentIds = Array.from(new Set(documentIds));
+    const { data: existingDocs, error: docsError } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("organization_id", ctx.organizationId)
+      .in("id", uniqueDocumentIds);
+    if (docsError) throw new Error(`Failed to validate selected documents: ${docsError.message}`);
+
+    if ((existingDocs ?? []).length !== uniqueDocumentIds.length) {
+      throw new AdminFormError("One or more selected documents are invalid for this organization.", {
+        document_ids: ["Please select valid documents from your organization."]
+      });
+    }
+
     const { error: joinError } = await supabase.from("space_documents").insert(
-      documentIds.map((documentId, index) => ({ space_id: space.id, document_id: documentId, position: index }))
+      uniqueDocumentIds.map((documentId, index) => ({ space_id: space.id, document_id: documentId, position: index }))
     );
     if (joinError) throw new Error(joinError.message);
   }
@@ -295,8 +310,8 @@ export async function updateSpace(spaceId: string, formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
-  if (!supabase) return;
+  const supabase = createAdminClientOrNull() as any;
+  if (!supabase) throw new Error("Supabase admin client is not configured.");
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -314,18 +329,42 @@ export async function updateSpace(spaceId: string, formData: FormData) {
 
   await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug, excludeId: spaceId });
 
+  const { data: ownedSpace, error: ownedSpaceError } = await supabase
+    .from("spaces")
+    .select("id")
+    .eq("id", spaceId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  if (ownedSpaceError) throw new Error(ownedSpaceError.message);
+  if (!ownedSpace) throw new Error("Space not found.");
+
   const { error: updateError } = await supabase
     .from("spaces")
     .update({ name, description: description || null, public_slug: publicSlug, is_active: active, updated_at: new Date().toISOString() })
-    .eq("id", spaceId);
+    .eq("id", spaceId)
+    .eq("organization_id", ctx.organizationId);
   if (updateError) throw new Error(updateError.message);
 
   const { error: deleteError } = await supabase.from("space_documents").delete().eq("space_id", spaceId);
   if (deleteError) throw new Error(deleteError.message);
 
   if (documentIds.length > 0) {
+    const uniqueDocumentIds = Array.from(new Set(documentIds));
+    const { data: existingDocs, error: docsError } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("organization_id", ctx.organizationId)
+      .in("id", uniqueDocumentIds);
+    if (docsError) throw new Error(`Failed to validate selected documents: ${docsError.message}`);
+
+    if ((existingDocs ?? []).length !== uniqueDocumentIds.length) {
+      throw new AdminFormError("One or more selected documents are invalid for this organization.", {
+        document_ids: ["Please select valid documents from your organization."]
+      });
+    }
+
     const { error: joinError } = await supabase.from("space_documents").insert(
-      documentIds.map((documentId, index) => ({ space_id: spaceId, document_id: documentId, position: index }))
+      uniqueDocumentIds.map((documentId, index) => ({ space_id: spaceId, document_id: documentId, position: index }))
     );
     if (joinError) throw new Error(joinError.message);
   }

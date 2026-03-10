@@ -2,6 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { createClientOrNull } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import type { AppRole } from "@/lib/db/types";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 
@@ -18,7 +19,7 @@ const demoContext: AuthContext = {
 };
 
 async function getMembershipContext(userId: string): Promise<Omit<AuthContext, "userId"> | null> {
-  const supabase = await createClientOrNull();
+  const supabase = createAdminClientOrNull();
   if (!supabase) return null;
 
   const { data: membership } = await supabase
