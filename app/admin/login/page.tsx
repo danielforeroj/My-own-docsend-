@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiplied Docs</p>
           <h1 className="mt-1 text-2xl font-semibold">Admin login</h1>
-          <p className="text-sm text-muted-foreground">Use your Supabase-authenticated admin credentials.</p>
+          <p className="text-sm text-muted-foreground">Sign in to manage documents, spaces, and share links.</p>
         </div>
 
         {!supabaseReady ? (
@@ -58,8 +58,9 @@ export default function AdminLoginPage() {
         ) : null}
 
         <div className="space-y-2">
-          <label className="label">Email</label>
+          <label className="label">Work email</label>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={!supabaseReady} />
+          <p className="text-xs text-muted-foreground">Use the email for your admin account.</p>
         </div>
 
         <div className="space-y-2">
@@ -69,22 +70,24 @@ export default function AdminLoginPage() {
 
         {error ? <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p> : null}
 
-        <button className="btn-primary w-full" disabled={pending || !supabaseReady}>
-          {pending ? "Signing in..." : "Sign in"}
-        </button>
-
-        {demoMode ? (
-          <button
-            type="button"
-            className="btn-secondary w-full"
-            onClick={() => {
-              router.push("/admin");
-              router.refresh();
-            }}
-          >
-            Enter admin preview (Demo mode)
+        <div className="space-y-3 pt-1">
+          <button className="btn-primary w-full" disabled={pending || !supabaseReady}>
+            {pending ? <><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />Signing in...</> : "Sign in to admin"}
           </button>
-        ) : null}
+
+          {demoMode ? (
+            <button
+              type="button"
+              className="btn-secondary w-full"
+              onClick={() => {
+                router.push("/admin");
+                router.refresh();
+              }}
+            >
+              Enter admin preview (Demo mode)
+            </button>
+          ) : null}
+        </div>
       </form>
     </main>
   );
