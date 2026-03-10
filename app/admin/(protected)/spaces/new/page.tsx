@@ -1,54 +1,69 @@
 import Link from "next/link";
-import { createSpace } from "@/app/admin/actions";
+import { createSpaceActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
+import { SlugField } from "@/components/admin/slug-field";
+import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 
 export default async function NewSpacePage() {
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = createAdminClientOrNull();
 
-  const { data: documentRows } = await supabase
-    .from("documents")
-    .select("id, title")
-    .eq("organization_id", ctx.organizationId)
-    .order("created_at", { ascending: false });
+  let documents: Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">> = [];
+  let documentsError: string | null = null;
 
-  const documents = (documentRows ?? []) as Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">>;
+  if (!supabase) {
+    documentsError = "Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.";
+  } else {
+    const { data: documentRows, error } = await supabase
+      .from("documents")
+      .select("id, title")
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      documentsError = `${error.message}${error.code ? ` (code: ${error.code})` : ""}`;
+    }
+
+    documents = (documentRows ?? []) as Array<Pick<Database["public"]["Tables"]["documents"]["Row"], "id" | "title">>;
+  }
 
   return (
     <div className="max-w-2xl space-y-4">
-      <Link href="/admin/spaces" className="text-sm text-slate-600">
+      <Link href="/admin/spaces" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back to spaces
       </Link>
       <h1 className="text-2xl font-semibold">Create Space</h1>
 
-      <form action={createSpace} className="space-y-4 rounded-lg border border-slate-200 p-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Name</label>
-          <input name="name" required className="w-full" />
-        </div>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Description</label>
-          <textarea name="description" className="w-full" rows={4} />
-        </div>
+      <ServerActionForm action={createSpaceActionState} className="space-y-4 rounded-2xl border border-border bg-card p-5" idleLabel="Create space" pendingLabel="Creating space...">
+        {(state) => (
+          <>
+            <SlugField sourceName="name" sourceLabel="Name" slugName="public_slug" slugLabel="Public URL slug" routePrefix="/sp" namespace="space" />
+            <FormFieldError state={state} name="name" />
+            <FormFieldError state={state} name="public_slug" />
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Documents in this space</label>
-          <div className="space-y-2">
-            {documents.map((document) => (
-              <label key={document.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="document_ids" value={document.id} /> {document.title}
-              </label>
-            ))}
-            {!documents.length ? <p className="text-sm text-slate-500">No documents uploaded yet.</p> : null}
-          </div>
-        </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Description</label>
+              <textarea name="description" className="w-full" rows={4} />
+            </div>
 
-        <button className="bg-slate-900 text-white" type="submit">
-          Create space
-        </button>
-      </form>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Documents in this space</label>
+              <div className="space-y-2">
+                {documents.map((document) => (
+                  <label key={document.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="document_ids" value={document.id} /> {document.title}
+                  </label>
+                ))}
+                {documentsError ? <p className="text-sm text-red-300">Could not load documents: {documentsError}</p> : null}
+                {!documents.length && !documentsError ? <p className="text-sm text-muted-foreground">No documents uploaded yet.</p> : null}
+              </div>
+            </div>
+            <FormFieldError state={state} name="document_ids" />
+          </>
+        )}
+      </ServerActionForm>
     </div>
   );
 }
