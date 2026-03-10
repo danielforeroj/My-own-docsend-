@@ -1,18 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateSpaceActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { createClientOrNull } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
-import { SlugField } from "@/components/admin/slug-field";
-import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
+import { EditSpaceForm } from "@/components/admin/forms/admin-action-forms";
 
 export default async function EditSpacePage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
-  const supabase = createAdminClientOrNull();
+  const supabase = await createClientOrNull();
 
   if (!supabase) {
-    throw new Error("Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.");
+    throw new Error("Could not initialize Supabase server client.");
   }
 
   const [{ data: spaceData, error: spaceError }, { data: documentsData, error: documentsError }, { data: selectedData, error: selectedError }] = await Promise.all([
@@ -40,8 +38,6 @@ export default async function EditSpacePage({ params }: { params: { id: string }
 
   if (!space) notFound();
 
-  const selectedIds = new Set(selected.map((item) => item.document_id));
-  const action = updateSpaceActionState.bind(null, space.id);
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -58,51 +54,11 @@ export default async function EditSpacePage({ params }: { params: { id: string }
         </section>
       ) : null}
 
-      <ServerActionForm action={action} className="space-y-4 rounded-2xl border border-border bg-card p-5" idleLabel="Save changes" pendingLabel="Saving changes...">
-        {(state) => (
-          <>
-            <SlugField
-              sourceName="name"
-              sourceLabel="Name"
-              sourceInitial={space.name}
-              slugName="public_slug"
-              slugInitial={space.public_slug ?? ""}
-              slugLabel="Public URL slug"
-              routePrefix="/sp"
-              namespace="space"
-              excludeId={space.id}
-            />
-            <FormFieldError state={state} name="name" />
-            <FormFieldError state={state} name="public_slug" />
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Description</label>
-              <textarea name="description" defaultValue={space.description ?? ""} className="w-full" rows={4} />
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="is_active" defaultChecked={space.is_active} /> Active
-            </label>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Documents in this space</label>
-              {documents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No documents found. Upload documents first from the documents library.</p>
-              ) : (
-                <div className="space-y-2">
-                  {documents.map((document) => (
-                    <label key={document.id} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" name="document_ids" value={document.id} defaultChecked={selectedIds.has(document.id)} />
-                      {document.title}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            <FormFieldError state={state} name="document_ids" />
-          </>
-        )}
-      </ServerActionForm>
+      <EditSpaceForm
+        space={space}
+        documents={documents}
+        selectedDocumentIds={selected.map((item) => item.document_id)}
+      />
     </div>
   );
 }

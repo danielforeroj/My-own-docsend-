@@ -3,6 +3,7 @@ import { deleteDocument } from "@/app/admin/actions";
 import { CopyLinkButton } from "@/components/admin/copy-link-button";
 import { DeleteActionButton } from "@/components/admin/delete-action-button";
 import { requireAdminContext } from "@/lib/auth/server";
+import { ExternalLinkIcon, PencilIcon } from "@/components/ui/icons";
 import { getDocumentsData } from "@/lib/data/repository";
 
 export default async function DocumentsPage() {
@@ -54,8 +55,10 @@ export default async function DocumentsPage() {
             </thead>
             <tbody>
               {documents.map((document: { id: string; title: string; file_size?: number | null; created_at: string; visibility?: string; public_slug?: string | null; landing_page?: { viewer_mode?: string; viewer_page_count?: number } | null }) => {
-                const viewerMode = document.landing_page?.viewer_mode === "deck" ? "deck" : "document";
-                const viewerPages = typeof document.landing_page?.viewer_page_count === "number" ? document.landing_page.viewer_page_count : 12;
+                const viewerModeRaw = document.landing_page?.viewer_mode ?? (document.landing_page as { viewerMode?: string } | null)?.viewerMode;
+                const viewerPagesRaw = document.landing_page?.viewer_page_count ?? (document.landing_page as { viewerPageCount?: number } | null)?.viewerPageCount;
+                const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+                const viewerPages = typeof viewerPagesRaw === "number" ? viewerPagesRaw : 12;
                 const deleteAction = deleteDocument.bind(null, document.id);
 
                 return (
@@ -70,8 +73,15 @@ export default async function DocumentsPage() {
                     <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">
-                        <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create share link</Link>
-                        {document.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/d/${document.public_slug}`} label="Copy doc URL" /> : null}
+                        <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`} title="Create share link" aria-label="Create share link">
+                          <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span>Share</span>
+                        </Link>
+                        {document.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/d/${document.public_slug}`} label="Copy document URL" iconOnly /> : null}
+                        <Link className="btn-inline btn-inline-compact" href={`/admin/documents/${document.id}`} title="Edit document" aria-label="Edit document">
+                          <PencilIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span className="sr-only">Edit</span>
+                        </Link>
                         <form action={deleteAction} className="inline-flex">
                           <DeleteActionButton confirmMessage="Delete this document? This also removes related share links and space assignments." />
                         </form>
