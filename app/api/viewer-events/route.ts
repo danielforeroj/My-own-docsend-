@@ -10,11 +10,17 @@ type ViewerEventPayload = {
   shareToken?: string | null;
   page?: number;
   mode?: string;
-  event?: string;
+  event?: "view_start" | "view_end" | "slide_change" | string;
 };
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function parseUserAgentFamily(userAgent: string) {
+  if (/mobile/i.test(userAgent)) return "mobile";
+  if (/tablet|ipad/i.test(userAgent)) return "tablet";
+  return "desktop";
 }
 
 export async function POST(request: Request) {
@@ -68,30 +74,44 @@ export async function POST(request: Request) {
     const headerStore = await headers();
     const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const userAgent = headerStore.get("user-agent") || "unknown";
-    const fingerprint = createHash("sha256")
+
+    const country = headerStore.get("x-vercel-ip-country") || headerStore.get("cf-ipcountry") || "unknown";
+    const region = headerStore.get("x-vercel-ip-country-region") || headerStore.get("x-vercel-region") || "unknown";
+    const city = headerStore.get("x-vercel-ip-city") || "unknown";
+    const device = parseUserAgentFamily(userAgent);
+
+    const fingerprintHash = createHash("sha256")
       .update(`${documentId ?? "none"}:${spaceId ?? "none"}:${forwardedFor}:${userAgent}`)
       .digest("hex");
+    const fingerprint = `${fingerprintHash}|${country}|${region}|${city}|${device}`;
 
-    const startedAt = new Date().toISOString();
+    const nowIso = new Date().toISOString();
     const recentThreshold = new Date(Date.now() - 1000 * 60 * 30).toISOString();
 
     const duplicateQuery = supabase
       .from("view_sessions")
       .select("id")
-      .eq("viewer_fingerprint", fingerprint)
+      .like("viewer_fingerprint", `${fingerprintHash}|%`)
       .gte("created_at", recentThreshold)
       .limit(1);
 
     const scopedDuplicate = documentId ? duplicateQuery.eq("document_id", documentId) : duplicateQuery.eq("space_id", spaceId!);
     const { data: existing } = await scopedDuplicate;
 
+    const eventType = payload.event === "view_end" ? "view_end" : payload.event === "view_start" ? "view_start" : "slide_change";
+
+    if (eventType === "view_end" && existing?.length) {
+      await supabase.from("view_sessions").update({ ended_at: nowIso }).eq("id", existing[0].id);
+      return NextResponse.json({ ok: true });
+    }
+
     if (!existing?.length) {
       await supabase.from("view_sessions").insert({
         document_id: documentId,
         space_id: spaceId,
         viewer_fingerprint: fingerprint,
-        started_at: startedAt,
-        ended_at: startedAt
+        started_at: nowIso,
+        ended_at: eventType === "view_end" ? nowIso : null
       });
     }
 

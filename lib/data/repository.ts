@@ -16,6 +16,19 @@ function chunk<T>(values: T[], size = 200): T[][] {
   return rows;
 }
 
+
+function parseViewerContext(fingerprint: string | null) {
+  if (!fingerprint) return { country: "unknown", region: "unknown", city: "unknown", device: "unknown" };
+  const parts = fingerprint.split("|");
+  if (parts.length < 5) return { country: "unknown", region: "unknown", city: "unknown", device: "unknown" };
+  return {
+    country: parts[1] || "unknown",
+    region: parts[2] || "unknown",
+    city: parts[3] || "unknown",
+    device: parts[4] || "unknown"
+  };
+}
+
 export async function getDashboardData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
@@ -145,15 +158,15 @@ export async function getAnalyticsData(organizationId: string) {
   const safeDocuments = (documents ?? []) as Array<{ id: string; title: string }>;
   const safeSpaces = (spaces ?? []) as Array<{ id: string; name: string }>;
 
-  const documentViewRows: Array<{ id: string; document_id: string | null; created_at: string; viewer_fingerprint: string | null }> = [];
+  const documentViewRows: Array<{ id: string; document_id: string | null; created_at: string; started_at: string; ended_at: string | null; viewer_fingerprint: string | null }> = [];
   for (const ids of chunk(safeDocuments.map((item) => item.id))) {
-    const { data } = await supabase.from("view_sessions").select("id, document_id, created_at, viewer_fingerprint").in("document_id", ids);
+    const { data } = await supabase.from("view_sessions").select("id, document_id, created_at, started_at, ended_at, viewer_fingerprint").in("document_id", ids);
     documentViewRows.push(...((data ?? []) as typeof documentViewRows));
   }
 
-  const spaceViewRows: Array<{ id: string; space_id: string | null; created_at: string; viewer_fingerprint: string | null }> = [];
+  const spaceViewRows: Array<{ id: string; space_id: string | null; created_at: string; started_at: string; ended_at: string | null; viewer_fingerprint: string | null }> = [];
   for (const ids of chunk(safeSpaces.map((item) => item.id))) {
-    const { data } = await supabase.from("view_sessions").select("id, space_id, created_at, viewer_fingerprint").in("space_id", ids);
+    const { data } = await supabase.from("view_sessions").select("id, space_id, created_at, started_at, ended_at, viewer_fingerprint").in("space_id", ids);
     spaceViewRows.push(...((data ?? []) as typeof spaceViewRows));
   }
 
@@ -195,9 +208,50 @@ export async function getAnalyticsData(organizationId: string) {
   const totalViews = documentViewRows.length + spaceViewRows.length;
   const uniqueViewerFingerprints = new Set([...documentViewRows, ...spaceViewRows].map((row) => row.viewer_fingerprint).filter(Boolean));
 
+  const documentTitleById = new Map(safeDocuments.map((item) => [item.id, item.title]));
+  const spaceNameById = new Map(safeSpaces.map((item) => [item.id, item.name]));
+
   const recentVisits = [
-    ...documentViewRows.map((row) => ({ id: row.id, documentId: row.document_id, spaceId: null as string | null, createdAt: row.created_at })),
-    ...spaceViewRows.map((row) => ({ id: row.id, documentId: null as string | null, spaceId: row.space_id, createdAt: row.created_at }))
+    ...documentViewRows.map((row) => {
+      const context = parseViewerContext(row.viewer_fingerprint);
+      const durationSeconds = row.ended_at
+        ? Math.max(0, Math.round((new Date(row.ended_at).getTime() - new Date(row.started_at).getTime()) / 1000))
+        : null;
+      return {
+        id: row.id,
+        documentId: row.document_id,
+        spaceId: null as string | null,
+        targetLabel: row.document_id ? documentTitleById.get(row.document_id) ?? row.document_id : "Unknown document",
+        createdAt: row.created_at,
+        startedAt: row.started_at,
+        endedAt: row.ended_at,
+        durationSeconds,
+        country: context.country,
+        region: context.region,
+        city: context.city,
+        device: context.device
+      };
+    }),
+    ...spaceViewRows.map((row) => {
+      const context = parseViewerContext(row.viewer_fingerprint);
+      const durationSeconds = row.ended_at
+        ? Math.max(0, Math.round((new Date(row.ended_at).getTime() - new Date(row.started_at).getTime()) / 1000))
+        : null;
+      return {
+        id: row.id,
+        documentId: null as string | null,
+        spaceId: row.space_id,
+        targetLabel: row.space_id ? spaceNameById.get(row.space_id) ?? row.space_id : "Unknown space",
+        createdAt: row.created_at,
+        startedAt: row.started_at,
+        endedAt: row.ended_at,
+        durationSeconds,
+        country: context.country,
+        region: context.region,
+        city: context.city,
+        device: context.device
+      };
+    })
   ]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 25);

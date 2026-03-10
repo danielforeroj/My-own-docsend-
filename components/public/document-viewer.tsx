@@ -54,6 +54,41 @@ export function DocumentViewer({
   }, [mode, totalPages]);
 
   useEffect(() => {
+    if (!analytics) return;
+
+    fetch("/api/viewer-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        documentId: analytics.documentId,
+        shareToken: analytics.shareToken ?? null,
+        page: 1,
+        mode,
+        event: "view_start"
+      })
+    }).catch(() => {
+      // non-blocking analytics
+    });
+
+    return () => {
+      void fetch("/api/viewer-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          documentId: analytics.documentId,
+          shareToken: analytics.shareToken ?? null,
+          page: 1,
+          mode,
+          event: "view_end"
+        })
+      }).catch(() => {
+        // non-blocking analytics
+      });
+    };
+  }, [analytics, mode]);
+
+  useEffect(() => {
     if (mode !== "deck" || !analytics) return;
 
     fetch("/api/viewer-events", {

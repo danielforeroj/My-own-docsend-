@@ -263,13 +263,15 @@ export async function createSpace(formData: FormData) {
 
   await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug });
 
+  const internalSlug = `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
+
   const { data: space, error: spaceError } = await supabase
     .from("spaces")
     .insert({
       organization_id: ctx.organizationId,
       created_by: ctx.userId,
       name,
-      slug: publicSlug,
+      slug: internalSlug,
       description: description || null,
       public_slug: publicSlug
     })
@@ -497,7 +499,9 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/documents/${documentId}`);
+  revalidatePath("/admin/documents");
 }
+
 
 export async function updateSpaceLanding(spaceId: string, formData: FormData) {
   if (shouldDisableMutations()) {
@@ -519,7 +523,9 @@ export async function updateSpaceLanding(spaceId: string, formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+  revalidatePath("/admin/spaces");
 }
+
 
 
 export async function updateDocumentVisibility(documentId: string, formData: FormData) {
@@ -553,7 +559,9 @@ export async function updateDocumentVisibility(documentId: string, formData: For
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/documents/${documentId}`);
+  revalidatePath("/admin/documents");
 }
+
 
 export async function updateSpaceVisibility(spaceId: string, formData: FormData) {
   if (shouldDisableMutations()) {
@@ -576,7 +584,9 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+  revalidatePath("/admin/spaces");
 }
+
 
 
 

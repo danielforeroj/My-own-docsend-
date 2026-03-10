@@ -13,6 +13,7 @@ export default async function SettingsPage() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Configuration</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Manage organization settings, team members, and admin access.</p>
         {data.source === "demo" ? <p className="mt-2 text-xs text-yellow-300">Demo mode: settings are preview-only.</p> : null}
       </div>
 
@@ -56,7 +57,10 @@ export default async function SettingsPage() {
       ) : null}
 
       <section className="card p-5">
-        <h2 className="mb-2 font-semibold">Members</h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="font-semibold">Members</h2>
+          <span className="text-xs text-muted-foreground">{data.members.length} total</span>
+        </div>
         {!data.members.length ? <p className="text-sm text-muted-foreground">No members found for this organization.</p> : null}
         <ul className="space-y-2 text-sm">
           {data.members.map((member) => {
