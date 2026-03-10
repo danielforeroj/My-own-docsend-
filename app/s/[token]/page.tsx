@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getShareLinkByToken, getValidAccessGrant, ShareField } from "@/lib/share";
 import { getPublicShareByToken, shouldUseDemoData } from "@/lib/data/repository";
 import { PublicShell, type LandingConfig } from "@/components/public/public-shell";
+import { DocumentViewer } from "@/components/public/document-viewer";
 import type { Database } from "@/lib/db/types";
 
 async function getFields(shareLinkId: string): Promise<ShareField[]> {
@@ -25,6 +26,27 @@ async function getFields(shareLinkId: string): Promise<ShareField[]> {
     ...row,
     options: Array.isArray(row.options) ? (row.options as string[]) : null
   })) as ShareField[];
+}
+
+function withRequiredIntakeFallback(fields: ShareField[]): ShareField[] {
+  if (fields.length > 0) return fields;
+
+  return [
+    {
+      id: "fallback-email",
+      field_name: "email",
+      label: "Work email",
+      field_type: "email",
+      is_required: true,
+      options: null,
+      placeholder: "name@company.com",
+      help_text: "Required to access protected content.",
+      default_value: null,
+      width: "full",
+      validation_rule: "preset:email",
+      position: 0
+    }
+  ] as ShareField[];
 }
 
 function FieldRenderer({ field }: { field: ShareField & { help_text?: string | null; default_value?: string | null; width?: "full" | "half" } }) {
@@ -99,14 +121,16 @@ export default async function PublicSharePage({ params, searchParams }: { params
     if (!demo) notFound();
 
     if (demo.link.linkType === "document" && demo.document) {
+      const demoLanding = (demo.document.landingPage ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number };
+      const demoMode = demoLanding.viewer_mode === "deck" ? "deck" : "document";
+      const demoPages = typeof demoLanding.viewer_page_count === "number" && demoLanding.viewer_page_count > 0 ? demoLanding.viewer_page_count : 12;
+
       return (
-        <PublicShell landing={(demo.document.landingPage ?? {}) as LandingConfig} title={demo.document.title}>
+        <PublicShell landing={demoLanding} title={demo.document.title}>
           <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
             Demo mode: backend file preview and downloads are disabled.
           </p>
-          <div className="rounded-xl border border-border bg-background p-6 text-sm text-muted-foreground">
-            Document preview placeholder for <span className="font-medium text-foreground">{demo.document.title}</span>.
-          </div>
+          <DocumentViewer title={demo.document.title} signedUrl={null} mode={demoMode} pageCount={demoPages} analytics={{ documentId: demo.document.id, shareToken: params.token }} />
         </PublicShell>
       );
     }
@@ -137,7 +161,8 @@ export default async function PublicSharePage({ params, searchParams }: { params
   const link = linkData as ShareLinkRow | null;
   if (!link) notFound();
 
-  const [accessGrant, fields] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
+  const [accessGrant, fieldsData] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
+  const fields = link.requires_intake ? withRequiredIntakeFallback(fieldsData) : fieldsData;
   const intakeSettings = (link.intake_settings ?? {}) as Record<string, string | null>;
 
   const supabase = createAdminClient() as any;
@@ -168,10 +193,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
               ))}
             </div>
 
-            {!fields.length ? <p className="text-sm text-muted-foreground">No custom fields configured.</p> : null}
+            {!fieldsData.length ? <p className="text-sm text-muted-foreground">This protected link had no custom intake fields, so we require your email to continue.</p> : null}
             {intakeSettings.consent_text ? <p className="text-xs text-muted-foreground">{intakeSettings.consent_text}</p> : null}
             <button type="submit" className="btn-primary w-full md:w-auto">
-              Continue to content
+              Continue
             </button>
           </form>
         </div>
@@ -191,6 +216,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
 
     if (!document) notFound();
 
+    const landing = ((document.landing_page ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number }) || {};
+    const viewerMode = landing.viewer_mode === "deck" ? "deck" : "document";
+    const viewerPageCount = typeof landing.viewer_page_count === "number" && landing.viewer_page_count > 0 ? landing.viewer_page_count : 12;
+
     const { data: signedUrl } = await supabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 60);
 
     await trackView({
@@ -201,21 +230,19 @@ export default async function PublicSharePage({ params, searchParams }: { params
     });
 
     return (
-      <PublicShell landing={(document.landing_page ?? {}) as LandingConfig} title={document.title}>
+      <PublicShell landing={landing} title={document.title}>
         {searchParams?.submitted === "1" && intakeSettings.success_message ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{intakeSettings.success_message}</div>
         ) : null}
-        {signedUrl?.signedUrl ? <iframe title={document.title} src={signedUrl.signedUrl} className="h-[70vh] w-full rounded-xl border border-border" /> : <p className="text-sm text-muted-foreground">Unable to load document preview.</p>}
-        <div className="flex flex-wrap gap-3">
-          <Link className="btn-primary" href={`/s/${params.token}/download/${document.id}`}>
-            Download document
-          </Link>
-          {signedUrl?.signedUrl ? (
-            <Link className="btn-secondary" href={signedUrl.signedUrl} target="_blank">
-              Open in new tab
-            </Link>
-          ) : null}
-        </div>
+
+        <DocumentViewer
+          title={document.title}
+          signedUrl={signedUrl?.signedUrl ?? null}
+          mode={viewerMode}
+          pageCount={viewerPageCount}
+          downloadHref={`/s/${params.token}/download/${document.id}`}
+          analytics={{ documentId: document.id, shareToken: params.token }}
+        />
       </PublicShell>
     );
   }

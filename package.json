@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:viewer": "node scripts/viewer-integration.mjs",
+    "test:viewer:persistence": "node scripts/viewer-persistence-e2e.mjs",
+    "test:slug": "node scripts/slug-behavior.mjs",
+    "test:slug:auth": "node scripts/slug-uniqueness-auth-e2e.mjs",
+    "test:slug:browser": "node scripts/slug-forms-browser-e2e.mjs",
+    "test:admin:ux": "node scripts/admin-ux-regression-playwright.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
