@@ -322,7 +322,7 @@ export async function updateSpace(spaceId: string, formData: FormData) {
   const supabase = getAdminMutationClientOrThrow();
   const userScopedSupabase = (await createClientOrNull()) as any;
   const db = supabase ?? userScopedSupabase;
-  if (!db) throw new Error("Could not initialize a database client for space creation.");
+  if (!db) throw new Error("Could not initialize a database client for space update.");
 
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -390,7 +390,7 @@ export async function createShareLink(formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const targetType = String(formData.get("target_type") || "");
@@ -447,9 +447,18 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
     return;
   }
 
-  await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const ctx = await requireAdminContext();
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
+
+  const { data: ownedLink, error: ownedLinkError } = await supabase
+    .from("share_links")
+    .select("id")
+    .eq("id", shareLinkId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  if (ownedLinkError) throw new Error(ownedLinkError.message);
+  if (!ownedLink) throw new Error("Share link not found.");
 
   const name = String(formData.get("name") || "").trim();
   const requiresIntake = formData.get("requires_intake") === "on";
@@ -487,7 +496,7 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
@@ -520,14 +529,23 @@ export async function updateSpaceLanding(spaceId: string, formData: FormData) {
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const landingPage = parseLandingForm(formData);
 
+  const { data: existingData } = await supabase
+    .from("spaces")
+    .select("landing_page")
+    .eq("id", spaceId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+
+  const existingLanding = (existingData?.landing_page ?? {}) as Record<string, unknown>;
+
   const { error } = await supabase
     .from("spaces")
-    .update({ landing_page: landingPage, updated_at: new Date().toISOString() })
+    .update({ landing_page: { ...existingLanding, ...landingPage }, updated_at: new Date().toISOString() })
     .eq("id", spaceId)
     .eq("organization_id", ctx.organizationId);
 
@@ -545,7 +563,7 @@ export async function updateDocumentVisibility(documentId: string, formData: For
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
