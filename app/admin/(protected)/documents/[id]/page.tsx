@@ -105,9 +105,9 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
       ) : null}
 
       <section className="card p-5">
-        <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
+        <h2 className="mb-1 text-lg font-semibold">Public visibility & URL</h2>
         <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
-        <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Save visibility" pendingLabel="Saving visibility...">
+        <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Update visibility" pendingLabel="Updating visibility...">
           {(state) => (
             <>
           <div className="space-y-1">
@@ -138,24 +138,6 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
               className="w-full"
             />
           </div>
-          <div className="space-y-1">
-            <label className="label">Viewer mode</label>
-            <select name="viewer_mode" defaultValue={landing.viewer_mode ?? "document"} className="w-full">
-              <option value="document">Document (scroll)</option>
-              <option value="deck">Deck (slide-by-slide)</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="label">Viewer page count (for deck mode)</label>
-            <input
-              type="number"
-              min={1}
-              max={300}
-              name="viewer_page_count"
-              defaultValue={landing.viewer_page_count ?? 12}
-              className="w-full"
-            />
-          </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={document.show_in_catalog} /> Show in homepage public catalog</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={document.is_featured} /> Featured</label>
           <FormFieldError state={state} name="public_slug" />
@@ -166,7 +148,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
       <section className="card p-5">
         <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>
-        <ServerActionForm action={action} className="grid gap-4 md:grid-cols-2" idleLabel="Save landing config" pendingLabel="Saving landing config...">
+        <ServerActionForm action={action} className="grid gap-4 md:grid-cols-2" idleLabel="Update landing page" pendingLabel="Updating landing page...">
           <div className="space-y-1 md:col-span-2"><label className="label">Page title</label><input name="landing_page_title" defaultValue={landing.page_title ?? ""} className="w-full" /></div>
           <div className="space-y-1 md:col-span-2"><label className="label">Short description</label><textarea name="landing_short_description" rows={3} defaultValue={landing.short_description ?? ""} className="w-full" /></div>
           <div className="space-y-1"><label className="label">Eyebrow</label><input name="landing_eyebrow" defaultValue={landing.eyebrow ?? ""} className="w-full" /></div>
@@ -193,9 +175,10 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
 
       <section className="card p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Included in Spaces</h2>
-          <Link href="/admin/spaces" className="btn-secondary">Add to a space</Link>
+          <h2 className="font-semibold">Included in spaces</h2>
+          <Link href="/admin/spaces" className="btn-secondary">Manage in spaces</Link>
         </div>
+        <p className="mb-3 text-sm text-muted-foreground">Documents are assigned to spaces from the space management flow.</p>
 
         {spacesError ? (
           <div className="rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">
@@ -209,7 +192,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
                 {row.spaces ? <Link className="text-xs text-muted-foreground underline" href={`/admin/spaces/${row.spaces.id}/edit`}>Manage documents in space</Link> : null}
               </div>
             ))}
-            {!spaces?.length ? <p className="text-sm text-muted-foreground">Not in any space yet. Use <span className="font-medium">Add to a space</span> to assign it.</p> : null}
+            {!spaces?.length ? <p className="text-sm text-muted-foreground">This document is not in any space yet. Use <span className="font-medium">Manage in spaces</span> to assign it.</p> : null}
           </>
         )}
       </section>

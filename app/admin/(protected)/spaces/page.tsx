@@ -15,8 +15,18 @@ export default async function SpacesPage() {
           <p className="text-muted-foreground">Group documents into polished spaces for clients and partners.</p>
           {source === "demo" ? <p className="mt-2 text-xs text-yellow-300">Demo mode: create/edit actions are disabled.</p> : null}
         </div>
-        {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">New Space (Demo mode)</span> : <Link href="/admin/spaces/new" className="btn-primary inline-flex items-center justify-center">New Space</Link>}
+        {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">Create space (Demo mode)</span> : <Link href="/admin/spaces/new" className="btn-primary inline-flex items-center justify-center">Create space</Link>}
       </div>
+
+      {source === "supabase" && spaces.length === 0 ? (
+        <section className="card p-4">
+          <h2 className="font-semibold">No spaces yet</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Spaces help you bundle documents for a client or use case. Create one, then add documents from the space editor.</p>
+          <div className="mt-3">
+            <Link href="/admin/spaces/new" className="btn-primary inline-flex items-center">Create your first space</Link>
+          </div>
+        </section>
+      ) : null}
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -29,7 +39,7 @@ export default async function SpacesPage() {
                   <td className="px-4 py-3 text-muted-foreground">{space.slug}</td>
                   <td className="px-4 py-3 text-muted-foreground">{space.visibility ?? "private"}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${space.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>{space.is_active ? "Active" : "Inactive"}</span></td>
-                  <td className="px-4 py-3"><div className="flex flex-wrap justify-end gap-2"><Link className="btn-inline" href={`/admin/spaces/${space.id}/edit`}>Edit</Link></div></td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2"><Link className="btn-inline btn-inline-compact" href={`/admin/spaces/${space.id}/edit`}>Edit space</Link></div></td>
                 </tr>
               ))}
             </tbody>

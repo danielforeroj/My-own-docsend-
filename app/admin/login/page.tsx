@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiplied Docs</p>
           <h1 className="mt-1 text-2xl font-semibold">Admin login</h1>
-          <p className="text-sm text-muted-foreground">Use your Supabase-authenticated admin credentials.</p>
+          <p className="text-sm text-muted-foreground">Sign in to manage documents, spaces, and share links.</p>
         </div>
 
         {!supabaseReady ? (
@@ -58,8 +58,9 @@ export default function AdminLoginPage() {
         ) : null}
 
         <div className="space-y-2">
-          <label className="label">Email</label>
+          <label className="label">Work email</label>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" disabled={!supabaseReady} />
+          <p className="text-xs text-muted-foreground">Use the email for your admin account.</p>
         </div>
 
         <div className="space-y-2">

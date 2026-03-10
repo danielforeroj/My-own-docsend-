@@ -119,6 +119,13 @@ button {
   background: color-mix(in oklab, var(--foreground) 12%, transparent);
 }
 
+.btn-inline-compact {
+  min-height: 1.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.55rem;
+  font-size: 0.75rem;
+}
+
 .text-muted-foreground {
   color: var(--muted);
 }

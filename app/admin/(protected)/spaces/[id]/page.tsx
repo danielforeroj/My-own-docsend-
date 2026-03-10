@@ -77,9 +77,9 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
 
 
       <section className="card p-5">
-        <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
+        <h2 className="mb-1 text-lg font-semibold">Public visibility & URL</h2>
         <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
-        <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Save visibility" pendingLabel="Saving visibility...">
+        <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Update visibility" pendingLabel="Updating visibility...">
           {(state) => (
             <>
           <div className="space-y-1">
@@ -102,7 +102,7 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
 
       <section className="card p-5">
         <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>
-        <ServerActionForm action={action} className="grid gap-4 md:grid-cols-2" idleLabel="Save landing config" pendingLabel="Saving landing config...">
+        <ServerActionForm action={action} className="grid gap-4 md:grid-cols-2" idleLabel="Update landing page" pendingLabel="Updating landing page...">
           <div className="space-y-1 md:col-span-2"><label className="label">Page title</label><input name="landing_page_title" defaultValue={landing.page_title ?? ""} className="w-full" /></div>
           <div className="space-y-1 md:col-span-2"><label className="label">Short description</label><textarea name="landing_short_description" rows={3} defaultValue={landing.short_description ?? ""} className="w-full" /></div>
           <div className="space-y-1"><label className="label">Eyebrow</label><input name="landing_eyebrow" defaultValue={landing.eyebrow ?? ""} className="w-full" /></div>

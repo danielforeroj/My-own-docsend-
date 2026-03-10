@@ -146,11 +146,11 @@ export function IntakeFieldsEditor({ initialFields = [] }: { initialFields?: Edi
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Lead capture fields</h3>
-        <p className="text-sm text-muted-foreground">Add common fields in one click, then fine-tune only if needed.</p>
+        <p className="text-sm text-muted-foreground">Choose a common field to add it instantly, then edit details only when needed.</p>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick add common fields</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add common fields</p>
         <div className="flex flex-wrap gap-2">
           {COMMON_PRESETS.map((presetItem) => (
             <button
@@ -166,7 +166,7 @@ export function IntakeFieldsEditor({ initialFields = [] }: { initialFields?: Edi
           ))}
         </div>
 
-        <p className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Custom fields</p>
+        <p className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add custom fields</p>
         <div className="flex flex-wrap gap-2">
           {CUSTOM_FIELD_TYPES.map((fieldType) => (
             <button
@@ -184,7 +184,7 @@ export function IntakeFieldsEditor({ initialFields = [] }: { initialFields?: Edi
 
       <input type="hidden" name="field_count" value={fields.length} />
 
-      {!fields.length ? <p className="text-sm text-muted-foreground">No fields added yet.</p> : null}
+      {!fields.length ? <p className="text-sm text-muted-foreground">No intake fields yet. Add at least one field so visitors can request access.</p> : null}
 
       {fields.map((field, index) => {
         const validationPreset = toValidationPreset(field);
@@ -193,9 +193,9 @@ export function IntakeFieldsEditor({ initialFields = [] }: { initialFields?: Edi
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium">{field.label || field.field_name || `Field ${index + 1}`}</p>
               <div className="flex items-center gap-2">
-                <button type="button" className="btn-inline" onClick={() => move(index, -1)} disabled={index === 0}>↑</button>
-                <button type="button" className="btn-inline" onClick={() => move(index, 1)} disabled={index === fields.length - 1}>↓</button>
-                <button type="button" className="btn-inline" onClick={() => setFields((prev) => prev.filter((item) => item.id !== field.id))}>Remove</button>
+                <button type="button" className="btn-inline" onClick={() => move(index, -1)} disabled={index === 0}>Move up</button>
+                <button type="button" className="btn-inline" onClick={() => move(index, 1)} disabled={index === fields.length - 1}>Move down</button>
+                <button type="button" className="btn-inline" onClick={() => setFields((prev) => prev.filter((item) => item.id !== field.id))}>Remove field</button>
               </div>
             </div>
 

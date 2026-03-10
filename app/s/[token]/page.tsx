@@ -171,10 +171,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
               ))}
             </div>
 
-            {!fields.length ? <p className="text-sm text-muted-foreground">No custom fields configured.</p> : null}
+            {!fields.length ? <p className="text-sm text-muted-foreground">No intake questions are configured yet. You can continue to view the content.</p> : null}
             {intakeSettings.consent_text ? <p className="text-xs text-muted-foreground">{intakeSettings.consent_text}</p> : null}
             <button type="submit" className="btn-primary w-full md:w-auto">
-              Continue to content
+              Continue
             </button>
           </form>
         </div>

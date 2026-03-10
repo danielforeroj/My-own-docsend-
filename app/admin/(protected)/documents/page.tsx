@@ -12,10 +12,10 @@ export default async function DocumentsPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Library</p>
           <h1 className="text-3xl font-semibold tracking-tight">Documents</h1>
-          <p className="text-muted-foreground">Upload, organize, and share PDFs with trackable links.</p>
+          <p className="text-muted-foreground">Upload PDFs, adjust viewer settings, and create share links in a few clicks.</p>
           {source === "demo" ? <p className="mt-2 text-xs text-yellow-300">Demo mode: uploads are disabled.</p> : null}
         </div>
-        {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">Upload PDF (Demo mode)</span> : <Link href="/admin/documents/new" className="btn-primary inline-flex items-center justify-center">Upload PDF</Link>}
+        {source === "demo" ? <span className="btn-secondary inline-flex items-center justify-center opacity-70">Upload PDF (Demo mode)</span> : <Link href="/admin/documents/new" className="btn-primary inline-flex items-center justify-center">Upload new PDF</Link>}
       </div>
 
       {error ? (
@@ -29,7 +29,7 @@ export default async function DocumentsPage() {
       {!error && source === "supabase" && documents.length === 0 ? (
         <section className="card p-4">
           <h2 className="font-semibold">No documents yet</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Upload your first PDF to see it here and assign it to spaces.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Start by uploading a PDF. After upload, you can create share links or add it to a space.</p>
           <div className="mt-3">
             <Link href="/admin/documents/new" className="btn-primary inline-flex items-center">Upload your first PDF</Link>
           </div>
@@ -65,8 +65,8 @@ export default async function DocumentsPage() {
                     <td className="px-4 py-3 text-muted-foreground">{document.visibility ?? "private"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(document.created_at).toLocaleString()}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Link className="btn-inline" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create link</Link>
+                      <div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">
+                        <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create share link</Link>
                       </div>
                     </td>
                   </tr>
