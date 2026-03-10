@@ -6,6 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeSlug } from "@/lib/slug";
 
+function parseUploadOptions(publicSlug: string | undefined, viewerMode: "deck" | "document" | undefined, viewerPageCount: number | undefined) {
+  const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+  const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+  const safeViewerPageCount = Number.isFinite(viewerPageCount)
+    ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
+    : 12;
+
+  return { normalizedSlug, safeViewerMode, safeViewerPageCount };
+}
+
 export async function POST(request: Request) {
   try {
     const ctx = await getAdminContextOrNull();
@@ -63,6 +73,12 @@ export async function POST(request: Request) {
       : 12;
 
     const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
+    const { normalizedSlug, safeViewerMode, safeViewerPageCount } = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
 
     if (!normalizedSlug) {
       return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
