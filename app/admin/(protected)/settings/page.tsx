@@ -22,10 +22,16 @@ export default async function SettingsPage() {
 
       {ctx.role === "super_admin" ? (
         <section className="card p-5">
-          <h2 className="mb-2 font-semibold">Create employee user</h2>
+          <h2 className="mb-1 font-semibold">Create employee user</h2>
+          <p className="mb-3 text-sm text-muted-foreground">Creates auth user access and syncs profile + membership for this organization.</p>
           <ServerActionForm action={createEmployeeUserActionState} className="grid gap-3 md:grid-cols-2" idleLabel="Create user" pendingLabel="Creating user..." submitClassName="btn-primary md:col-span-2">
             {(state) => (
               <>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="label">Full name</label>
+                  <input name="full_name" type="text" className="w-full" required />
+                  <FormFieldError state={state} name="full_name" />
+                </div>
                 <div className="space-y-1">
                   <label className="label">Email</label>
                   <input name="email" type="email" className="w-full" required />
@@ -49,7 +55,25 @@ export default async function SettingsPage() {
         </section>
       ) : null}
 
-      <section className="card p-5"><h2 className="mb-2 font-semibold">Members</h2><ul className="space-y-1 text-sm">{data.members.map((member) => <li key={member.userId}>{member.userId} — <span className="font-medium">{member.role}</span></li>)}</ul></section>
+      <section className="card p-5">
+        <h2 className="mb-2 font-semibold">Members</h2>
+        {!data.members.length ? <p className="text-sm text-muted-foreground">No members found for this organization.</p> : null}
+        <ul className="space-y-2 text-sm">
+          {data.members.map((member) => {
+            const fullName = "fullName" in member ? member.fullName : null;
+            const email = "email" in member ? member.email : null;
+            return (
+            <li key={member.userId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+              <div>
+                <p className="font-medium">{fullName ?? "Unnamed user"}</p>
+                <p className="text-xs text-muted-foreground">{email ?? member.userId}</p>
+              </div>
+              <span className="rounded-full bg-background px-2 py-1 text-xs capitalize text-muted-foreground">{member.role}</span>
+            </li>
+            );
+          })}
+        </ul>
+      </section>
     </div>
   );
 }
