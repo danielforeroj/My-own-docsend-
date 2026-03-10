@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClientOrNull } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, createAdminClientOrNull } from "@/lib/supabase/admin";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/runtime";
 import { mockAnalyticsSummary, mockBrandingSettings, mockDocuments, mockShareLinks, mockSpaces } from "@/lib/data/mock";
 import type { Database } from "@/lib/db/types";
@@ -45,27 +45,55 @@ export async function getDocumentsData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured }))
+      documents: mockDocuments.map((d) => ({ id: d.id, title: d.title, file_size: d.fileSize, created_at: d.createdAt, visibility: d.visibility, public_slug: d.publicSlug, show_in_catalog: d.showInCatalog, is_featured: d.isFeatured, landing_page: d.landingPage ?? null })),
+      error: null as string | null
     };
   }
 
   const supabase = await createClientOrNull();
-  if (!supabase) return { source: "demo" as const, documents: [] };
-  const { data } = await supabase.from("documents").select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured").eq("organization_id", organizationId).order("created_at", { ascending: false });
-  return { source: "supabase" as const, documents: data ?? [] };
+  if (!supabase) {
+    return {
+      source: "supabase" as const,
+      documents: [],
+      error: "Supabase is configured but the server client could not be initialized."
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, title, file_size, created_at, visibility, public_slug, show_in_catalog, is_featured, landing_page")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  return {
+    source: "supabase" as const,
+    documents: data ?? [],
+    error: error ? `${error.message}${error.code ? ` (code: ${error.code})` : ""}` : null
+  };
 }
 
 export async function getSpacesData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
       source: "demo" as const,
-      spaces: mockSpaces.map((s) => ({ id: s.id, name: s.name, slug: s.slug, is_active: s.isActive, created_at: s.createdAt, visibility: s.visibility, public_slug: s.publicSlug, show_in_catalog: s.showInCatalog, is_featured: s.isFeatured }))
+      spaces: mockSpaces.map((s) => ({ id: s.id, name: s.name, slug: s.slug, is_active: s.isActive, created_at: s.createdAt, visibility: s.visibility, public_slug: s.publicSlug, show_in_catalog: s.showInCatalog, is_featured: s.isFeatured })),
+      error: null as string | null
     };
   }
-  const supabase = await createClientOrNull();
-  if (!supabase) return { source: "demo" as const, spaces: [] };
-  const { data } = await supabase.from("spaces").select("id, name, slug, is_active, created_at, visibility, public_slug, show_in_catalog, is_featured").eq("organization_id", organizationId).order("created_at", { ascending: false });
-  return { source: "supabase" as const, spaces: data ?? [] };
+  const supabase = createAdminClientOrNull();
+  if (!supabase) return { source: "supabase" as const, spaces: [], error: "Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY." };
+
+  const { data, error } = await supabase
+    .from("spaces")
+    .select("id, name, slug, is_active, created_at, visibility, public_slug, show_in_catalog, is_featured")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  return {
+    source: "supabase" as const,
+    spaces: data ?? [],
+    error: error ? `${error.message}${error.code ? ` (code: ${error.code})` : ""}` : null
+  };
 }
 
 export async function getShareLinksData(organizationId: string) {
@@ -204,7 +232,7 @@ export async function getPublicDocumentBySlug(slug: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("documents")
-    .select("id, title, landing_page, visibility, public_slug")
+    .select("id, title, storage_path, landing_page, visibility, public_slug")
     .eq("visibility", "public")
     .eq("public_slug", slug)
     .maybeSingle();

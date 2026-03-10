@@ -104,7 +104,15 @@ export function validateIntakeValue(field: ShareField, value: FormDataEntryValue
     return { error: `${field.label} has an invalid option.` };
   }
 
-  if (field.validation_rule) {
+  if (field.validation_rule?.startsWith("preset:")) {
+    const preset = field.validation_rule.replace("preset:", "");
+    if (preset === "email" && !/^\S+@\S+\.\S+$/.test(raw)) {
+      return { error: `${field.label} must be a valid email.` };
+    }
+    if (preset === "phone" && !/^[+()\-\s\d]{7,20}$/.test(raw)) {
+      return { error: `${field.label} must be a valid phone.` };
+    }
+  } else if (field.validation_rule) {
     try {
       const regex = new RegExp(field.validation_rule);
       if (!regex.test(raw)) {
