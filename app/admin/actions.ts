@@ -351,7 +351,7 @@ export async function updateSpace(spaceId: string, formData: FormData) {
 
   const { error: updateError } = await db
     .from("spaces")
-    .update({ name, description: description || null, public_slug: publicSlug, is_active: active, updated_at: new Date().toISOString() })
+    .update({ name, description: description || null, slug: publicSlug, public_slug: publicSlug, is_active: active, updated_at: new Date().toISOString() })
     .eq("id", spaceId)
     .eq("organization_id", ctx.organizationId);
   if (updateError) throw new Error(updateError.message);
