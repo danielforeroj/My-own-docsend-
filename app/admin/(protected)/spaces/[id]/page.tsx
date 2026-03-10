@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateSpaceLanding, updateSpaceVisibility } from "@/app/admin/actions";
+import { updateSpaceLandingActionState, updateSpaceVisibilityActionState } from "@/app/admin/actions";
 import { requireAdminContext } from "@/lib/auth/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
+import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
+import { SlugField } from "@/components/admin/slug-field";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -27,7 +29,8 @@ type LandingConfig = {
 
 export default async function SpaceDetailPage({ params }: { params: { id: string } }) {
   const ctx = await requireAdminContext();
-  const supabase = await createClient();
+  const supabase = createAdminClientOrNull();
+  if (!supabase) throw new Error("Supabase admin client is not configured. Check SUPABASE_SERVICE_ROLE_KEY.");
 
   const { data: spaceData } = await supabase
     .from("spaces")
@@ -55,8 +58,8 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
   ]);
 
   const landing = ((space.landing_page ?? {}) as LandingConfig) || {};
-  const action = updateSpaceLanding.bind(null, space.id);
-  const visibilityAction = updateSpaceVisibility.bind(null, space.id);
+  const action = updateSpaceLandingActionState.bind(null, space.id);
+  const visibilityAction = updateSpaceVisibilityActionState.bind(null, space.id);
 
   return (
     <div className="space-y-8">
@@ -75,9 +78,11 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
 
 
       <section className="card p-5">
-        <h2 className="mb-1 text-lg font-semibold">Public visibility</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog by slug. Private items stay hidden from catalog and can still be shared via private/share links.</p>
-        <form action={visibilityAction} className="grid gap-4 md:grid-cols-2">
+        <h2 className="mb-1 text-lg font-semibold">Public visibility & URL</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
+        <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Update visibility" pendingLabel="Updating visibility...">
+          {(state) => (
+            <>
           <div className="space-y-1">
             <label className="label">Visibility</label>
             <select name="visibility" defaultValue={space.visibility} className="w-full">
@@ -86,18 +91,19 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
             </select>
           </div>
           <div className="space-y-1">
-            <label className="label">Public slug (for /docs or /spaces route)</label>
-            <input name="public_slug" defaultValue={space.public_slug ?? ""} className="w-full" placeholder="my-public-space" />
+            <SlugField slugName="public_slug" slugInitial={space.public_slug ?? ""} sourceInitial={space.name} slugLabel="Public URL slug" routePrefix="/sp" namespace="space" excludeId={space.id} />
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="show_in_catalog" defaultChecked={space.show_in_catalog} /> Show in homepage public catalog</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" defaultChecked={space.is_featured} /> Featured</label>
-          <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save visibility</button></div>
-        </form>
+          <FormFieldError state={state} name="public_slug" />
+            </>
+          )}
+        </ServerActionForm>
       </section>
 
       <section className="card p-5">
         <h2 className="mb-3 text-lg font-semibold">Structured landing page</h2>
-        <form action={action} className="grid gap-4 md:grid-cols-2">
+        <ServerActionForm action={action} className="grid gap-4 md:grid-cols-2" idleLabel="Update landing page" pendingLabel="Updating landing page...">
           <div className="space-y-1 md:col-span-2"><label className="label">Page title</label><input name="landing_page_title" defaultValue={landing.page_title ?? ""} className="w-full" /></div>
           <div className="space-y-1 md:col-span-2"><label className="label">Short description</label><textarea name="landing_short_description" rows={3} defaultValue={landing.short_description ?? ""} className="w-full" /></div>
           <div className="space-y-1"><label className="label">Eyebrow</label><input name="landing_eyebrow" defaultValue={landing.eyebrow ?? ""} className="w-full" /></div>
@@ -119,8 +125,7 @@ export default async function SpaceDetailPage({ params }: { params: { id: string
             <label className="flex items-center gap-2"><input type="checkbox" name="landing_show_highlights" defaultChecked={landing.show_highlights ?? false} /> Show highlights</label>
           </div>
 
-          <div className="md:col-span-2 flex justify-end"><button className="btn-primary" type="submit">Save landing config</button></div>
-        </form>
+          </ServerActionForm>
       </section>
 
       {space.description ? (
