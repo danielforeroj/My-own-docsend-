@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { deleteShareLink } from "@/app/admin/actions";
+import { CopyLinkButton } from "@/components/admin/copy-link-button";
+import { DeleteActionButton } from "@/components/admin/delete-action-button";
 import { requireAdminContext } from "@/lib/auth/server";
 import { getShareLinksData } from "@/lib/data/repository";
 
@@ -37,6 +40,10 @@ export default async function ShareLinksPage() {
                     <div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">
                       <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/${link.id}`}>Edit settings</Link>
                       <Link className="btn-inline btn-inline-compact" href={`/s/${link.token}`} target="_blank">Open link</Link>
+                      <CopyLinkButton className="btn-inline btn-inline-compact" path={`/s/${link.token}`} label="Copy link" />
+                      <form action={deleteShareLink.bind(null, link.id)} className="inline-flex">
+                        <DeleteActionButton confirmMessage="Delete this share link? Existing visitors may lose access." />
+                      </form>
                     </div>
                   </td>
                 </tr>

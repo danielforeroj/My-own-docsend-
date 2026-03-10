@@ -580,27 +580,93 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
 }
 
 
-export async function createSpaceActionState(_prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+
+export async function createEmployeeUser(formData: FormData) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/settings");
+    return;
+  }
+
+  const ctx = await requireAdminContext();
+  if (ctx.role !== "super_admin") {
+    throw new Error("Only super admins can create employee users.");
+  }
+
+  const supabase = createAdminClientOrNull() as any;
+  if (!supabase) throw new Error("Supabase admin client is not configured.");
+
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const password = String(formData.get("password") || "").trim();
+  const roleRaw = String(formData.get("role") || "admin").trim();
+  const role = roleRaw === "super_admin" ? "super_admin" : "admin";
+
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      email: ["A valid email is required."]
+    });
+  }
+
+  if (password.length < 8) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      password: ["Password must be at least 8 characters."]
+    });
+  }
+
+  const { data: createdUser, error: userError } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true
+  });
+  if (userError || !createdUser.user) {
+    throw new Error(userError?.message ?? "Failed to create user.");
+  }
+
+  const { error: membershipError } = await supabase.from("memberships").insert({
+    organization_id: ctx.organizationId,
+    user_id: createdUser.user.id,
+    role
+  });
+
+  if (membershipError) {
+    throw new Error(membershipError.message);
+  }
+
+  revalidatePath("/admin/settings");
+}
+
+export async function createSpaceActionState(prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
   return withActionState(() => createSpace(formData), "Space created.");
 }
 
-export async function updateSpaceActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+
+export async function createEmployeeUserActionState(prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
+  return withActionState(() => createEmployeeUser(formData), "Employee user created.");
+}
+
+export async function updateSpaceActionState(spaceId: string, prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
   return withActionState(() => updateSpace(spaceId, formData), "Space updated.");
 }
 
-export async function updateDocumentVisibilityActionState(documentId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+export async function updateDocumentVisibilityActionState(documentId: string, prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
   return withActionState(() => updateDocumentVisibility(documentId, formData), "Visibility updated.");
 }
 
-export async function updateSpaceVisibilityActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+export async function updateSpaceVisibilityActionState(spaceId: string, prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
   return withActionState(() => updateSpaceVisibility(spaceId, formData), "Visibility updated.");
 }
 
-export async function updateDocumentLandingActionState(documentId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+export async function updateDocumentLandingActionState(documentId: string, prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
   return withActionState(() => updateDocumentLanding(documentId, formData), "Landing config updated.");
 }
 
-export async function updateSpaceLandingActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+export async function updateSpaceLandingActionState(spaceId: string, prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  void prev;
   return withActionState(() => updateSpaceLanding(spaceId, formData), "Landing config updated.");
 }
 

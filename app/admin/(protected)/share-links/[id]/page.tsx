@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateShareLinkFields } from "@/app/admin/actions";
+import { deleteShareLink, updateShareLinkFields } from "@/app/admin/actions";
 import { IntakeFieldsEditor, type EditableField } from "@/components/admin/intake-fields-editor";
+import { CopyLinkButton } from "@/components/admin/copy-link-button";
+import { DeleteActionButton } from "@/components/admin/delete-action-button";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
@@ -67,6 +69,12 @@ export default async function ShareLinkSettingsPage({ params }: { params: { id: 
         <p className="text-muted-foreground">
           Public URL: <code>/s/{link.token}</code>
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <CopyLinkButton path={`/s/${link.token}`} label="Copy public link" />
+          <form action={deleteShareLink.bind(null, link.id)} className="inline-flex">
+            <DeleteActionButton confirmMessage="Delete this share link? This removes related intake fields and grants." />
+          </form>
+        </div>
       </div>
 
       <form action={action} className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
