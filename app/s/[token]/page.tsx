@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createHash } from "crypto";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { submitIntake } from "@/app/s/[token]/actions";
@@ -93,12 +92,17 @@ async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: {
   const headerStore = await headers();
   const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const userAgent = headerStore.get("user-agent") || "unknown";
-  const fingerprint = createHash("sha256").update(`${linkId}:${forwardedFor}:${userAgent}`).digest("hex");
+  const country = headerStore.get("x-vercel-ip-country") || headerStore.get("cf-ipcountry") || "unknown";
+  const region = headerStore.get("x-vercel-ip-country-region") || headerStore.get("x-vercel-region") || "unknown";
+  const city = headerStore.get("x-vercel-ip-city") || "unknown";
+  const device = /mobile/i.test(userAgent) ? "mobile" : /tablet|ipad/i.test(userAgent) ? "tablet" : "desktop";
+  const fingerprintHash = createHash("sha256").update(`${linkId}:${forwardedFor}:${userAgent}`).digest("hex");
+  const fingerprint = `${fingerprintHash}|${country}|${region}|${city}|${device}`;
 
   const query = supabase
     .from("view_sessions")
     .select("id")
-    .eq("viewer_fingerprint", fingerprint)
+    .like("viewer_fingerprint", `${fingerprintHash}|%`)
     .gte("created_at", new Date(Date.now() - 1000 * 60 * 30).toISOString())
     .limit(1);
 
@@ -111,7 +115,8 @@ async function trackView({ linkId, documentId, spaceId, visitorSubmissionId }: {
     document_id: documentId,
     visitor_submission_id: visitorSubmissionId,
     viewer_fingerprint: fingerprint,
-    started_at: new Date().toISOString()
+    started_at: new Date().toISOString(),
+    ended_at: null
   });
 }
 
@@ -122,16 +127,16 @@ export default async function PublicSharePage({ params, searchParams }: { params
 
     if (demo.link.linkType === "document" && demo.document) {
       const demoLanding = (demo.document.landingPage ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number };
-      const demoMode = demoLanding.viewer_mode === "deck" ? "deck" : "document";
-      const demoPages = typeof demoLanding.viewer_page_count === "number" && demoLanding.viewer_page_count > 0 ? demoLanding.viewer_page_count : 12;
+      const demoModeRaw = demoLanding.viewer_mode ?? (demoLanding as { viewerMode?: "deck" | "document" }).viewerMode;
+      const demoPagesRaw = demoLanding.viewer_page_count ?? (demoLanding as { viewerPageCount?: number }).viewerPageCount;
+      const demoMode = demoModeRaw === "deck" ? "deck" : "document";
+      const demoPages = typeof demoPagesRaw === "number" && demoPagesRaw > 0 ? demoPagesRaw : 12;
 
       return (
-        <PublicShell landing={demoLanding} title={demo.document.title}>
-          <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">
-            Demo mode: backend file preview and downloads are disabled.
-          </p>
-          <DocumentViewer title={demo.document.title} signedUrl={null} mode={demoMode} pageCount={demoPages} analytics={{ documentId: demo.document.id, shareToken: params.token }} />
-        </PublicShell>
+        <main className="min-h-screen bg-[#111] text-neutral-100">
+          <div className="border-b border-white/10 px-4 py-2 text-xs text-neutral-400">Demo mode · secure shared view</div>
+          <DocumentViewer title={demo.document.title} signedUrl={null} mode={demoMode} pageCount={demoPages} analytics={{ documentId: demo.document.id, shareToken: params.token }} immersive />
+        </main>
       );
     }
 
@@ -217,8 +222,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
     if (!document) notFound();
 
     const landing = ((document.landing_page ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number }) || {};
-    const viewerMode = landing.viewer_mode === "deck" ? "deck" : "document";
-    const viewerPageCount = typeof landing.viewer_page_count === "number" && landing.viewer_page_count > 0 ? landing.viewer_page_count : 12;
+    const viewerModeRaw = landing.viewer_mode ?? (landing as { viewerMode?: "deck" | "document" }).viewerMode;
+    const viewerPagesRaw = landing.viewer_page_count ?? (landing as { viewerPageCount?: number }).viewerPageCount;
+    const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+    const viewerPageCount = typeof viewerPagesRaw === "number" && viewerPagesRaw > 0 ? viewerPagesRaw : 12;
 
     const { data: signedUrl } = await supabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 60);
 
@@ -230,9 +237,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
     });
 
     return (
-      <PublicShell landing={landing} title={document.title}>
+      <main className="min-h-screen bg-[#111] text-neutral-100">
+        <div className="border-b border-white/10 px-4 py-2 text-xs text-neutral-400">Secure shared link</div>
         {searchParams?.submitted === "1" && intakeSettings.success_message ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{intakeSettings.success_message}</div>
+          <div className="mx-4 mt-3 rounded-lg border border-emerald-300/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{intakeSettings.success_message}</div>
         ) : null}
 
         <DocumentViewer
@@ -240,10 +248,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
           signedUrl={signedUrl?.signedUrl ?? null}
           mode={viewerMode}
           pageCount={viewerPageCount}
-          downloadHref={`/s/${params.token}/download/${document.id}`}
           analytics={{ documentId: document.id, shareToken: params.token }}
+          immersive
         />
-      </PublicShell>
+      </main>
     );
   }
 
@@ -276,9 +284,7 @@ export default async function PublicSharePage({ params, searchParams }: { params
           {docRows.filter(Boolean).map((doc) => (
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2" key={doc!.id}>
               <span className="font-medium">{doc!.title}</span>
-              <Link className="btn-secondary" href={`/s/${params.token}/download/${doc!.id}`}>
-                Open
-              </Link>
+              <span className="btn-secondary opacity-80">View only</span>
             </div>
           ))}
           {!docRows.some(Boolean) ? <p className="text-sm text-muted-foreground">No documents in this space.</p> : null}

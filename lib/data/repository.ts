@@ -10,6 +10,25 @@ export function shouldUseDemoData() {
   return isDemoMode() || !isSupabaseConfigured();
 }
 
+function chunk<T>(values: T[], size = 200): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < values.length; i += size) rows.push(values.slice(i, i + size));
+  return rows;
+}
+
+
+function parseViewerContext(fingerprint: string | null) {
+  if (!fingerprint) return { country: "unknown", region: "unknown", city: "unknown", device: "unknown" };
+  const parts = fingerprint.split("|");
+  if (parts.length < 5) return { country: "unknown", region: "unknown", city: "unknown", device: "unknown" };
+  return {
+    country: parts[1] || "unknown",
+    region: parts[2] || "unknown",
+    city: parts[3] || "unknown",
+    device: parts[4] || "unknown"
+  };
+}
+
 export async function getDashboardData(organizationId: string) {
   if (shouldUseDemoData()) {
     return {
@@ -25,10 +44,17 @@ export async function getDashboardData(organizationId: string) {
   const supabase = await createClientOrNull();
   if (!supabase) return { source: "demo" as const, documents: [], spaces: [], recentUploads: [], recentViews: [], leadCount: 0 };
 
-  const [{ data: documents }, { data: spaces }, { data: recentUploads }] = await Promise.all([
+  const [{ data: documents }, { data: spaces }, { data: recentUploads }, { data: recentViews }, { count: leadCount }] = await Promise.all([
     supabase.from("documents").select("id, title, created_at").eq("organization_id", organizationId),
     supabase.from("spaces").select("id, name").eq("organization_id", organizationId),
-    supabase.from("documents").select("id, title, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(8)
+    supabase.from("documents").select("id, title, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(8),
+    supabase
+      .from("view_sessions")
+      .select("id, document_id, space_id, created_at, documents!inner(organization_id)")
+      .eq("documents.organization_id", organizationId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase.from("visitor_submissions").select("id", { count: "exact", head: true }).not("id", "is", null)
   ]);
 
   return {
@@ -36,8 +62,8 @@ export async function getDashboardData(organizationId: string) {
     documents: documents ?? [],
     spaces: spaces ?? [],
     recentUploads: recentUploads ?? [],
-    recentViews: [],
-    leadCount: 0
+    recentViews: (recentViews ?? []).map((row: { id: string; document_id: string | null; space_id: string | null; created_at: string }) => row),
+    leadCount: leadCount ?? 0
   };
 }
 
@@ -120,19 +146,139 @@ export async function getAnalyticsData(organizationId: string) {
       perSpace: mockSpaces.map((s, i) => ({ id: s.id, name: s.name, views: 20 - i * 6, submissions: 4 - i }))
     };
   }
-  const supabase = await createClientOrNull();
+
+  const supabase = createAdminClientOrNull();
   if (!supabase) return { source: "demo" as const, documents: [], spaces: [], totals: { totalViews: 0, uniqueViewers: 0, downloads: 0, submissions: 0, recentVisits: [] }, perDocument: [], perSpace: [] };
+
   const [{ data: documents }, { data: spaces }] = await Promise.all([
     supabase.from("documents").select("id, title").eq("organization_id", organizationId),
     supabase.from("spaces").select("id, name").eq("organization_id", organizationId)
   ]);
+
+  const safeDocuments = (documents ?? []) as Array<{ id: string; title: string }>;
+  const safeSpaces = (spaces ?? []) as Array<{ id: string; name: string }>;
+
+  const documentViewRows: Array<{ id: string; document_id: string | null; created_at: string; started_at: string; ended_at: string | null; viewer_fingerprint: string | null }> = [];
+  for (const ids of chunk(safeDocuments.map((item) => item.id))) {
+    const { data } = await supabase.from("view_sessions").select("id, document_id, created_at, started_at, ended_at, viewer_fingerprint").in("document_id", ids);
+    documentViewRows.push(...((data ?? []) as typeof documentViewRows));
+  }
+
+  const spaceViewRows: Array<{ id: string; space_id: string | null; created_at: string; started_at: string; ended_at: string | null; viewer_fingerprint: string | null }> = [];
+  for (const ids of chunk(safeSpaces.map((item) => item.id))) {
+    const { data } = await supabase.from("view_sessions").select("id, space_id, created_at, started_at, ended_at, viewer_fingerprint").in("space_id", ids);
+    spaceViewRows.push(...((data ?? []) as typeof spaceViewRows));
+  }
+
+  const downloadRows: Array<{ document_id: string }> = [];
+  for (const ids of chunk(safeDocuments.map((item) => item.id))) {
+    const { data } = await supabase.from("downloads").select("document_id").in("document_id", ids);
+    downloadRows.push(...((data ?? []) as typeof downloadRows));
+  }
+
+  const submissionRows: Array<{ space_id: string | null }> = [];
+  for (const ids of chunk(safeSpaces.map((item) => item.id))) {
+    const { data } = await supabase.from("visitor_submissions").select("space_id").in("space_id", ids);
+    submissionRows.push(...((data ?? []) as typeof submissionRows));
+  }
+
+  const viewsByDocument = new Map<string, number>();
+  for (const row of documentViewRows) {
+    if (!row.document_id) continue;
+    viewsByDocument.set(row.document_id, (viewsByDocument.get(row.document_id) ?? 0) + 1);
+  }
+
+  const viewsBySpace = new Map<string, number>();
+  for (const row of spaceViewRows) {
+    if (!row.space_id) continue;
+    viewsBySpace.set(row.space_id, (viewsBySpace.get(row.space_id) ?? 0) + 1);
+  }
+
+  const downloadsByDocument = new Map<string, number>();
+  for (const row of downloadRows) {
+    downloadsByDocument.set(row.document_id, (downloadsByDocument.get(row.document_id) ?? 0) + 1);
+  }
+
+  const submissionsBySpace = new Map<string, number>();
+  for (const row of submissionRows) {
+    if (!row.space_id) continue;
+    submissionsBySpace.set(row.space_id, (submissionsBySpace.get(row.space_id) ?? 0) + 1);
+  }
+
+  const totalViews = documentViewRows.length + spaceViewRows.length;
+  const uniqueViewerFingerprints = new Set([...documentViewRows, ...spaceViewRows].map((row) => row.viewer_fingerprint).filter(Boolean));
+
+  const documentTitleById = new Map(safeDocuments.map((item) => [item.id, item.title]));
+  const spaceNameById = new Map(safeSpaces.map((item) => [item.id, item.name]));
+
+  const recentVisits = [
+    ...documentViewRows.map((row) => {
+      const context = parseViewerContext(row.viewer_fingerprint);
+      const durationSeconds = row.ended_at
+        ? Math.max(0, Math.round((new Date(row.ended_at).getTime() - new Date(row.started_at).getTime()) / 1000))
+        : null;
+      return {
+        id: row.id,
+        documentId: row.document_id,
+        spaceId: null as string | null,
+        targetLabel: row.document_id ? documentTitleById.get(row.document_id) ?? row.document_id : "Unknown document",
+        createdAt: row.created_at,
+        startedAt: row.started_at,
+        endedAt: row.ended_at,
+        durationSeconds,
+        country: context.country,
+        region: context.region,
+        city: context.city,
+        device: context.device
+      };
+    }),
+    ...spaceViewRows.map((row) => {
+      const context = parseViewerContext(row.viewer_fingerprint);
+      const durationSeconds = row.ended_at
+        ? Math.max(0, Math.round((new Date(row.ended_at).getTime() - new Date(row.started_at).getTime()) / 1000))
+        : null;
+      return {
+        id: row.id,
+        documentId: null as string | null,
+        spaceId: row.space_id,
+        targetLabel: row.space_id ? spaceNameById.get(row.space_id) ?? row.space_id : "Unknown space",
+        createdAt: row.created_at,
+        startedAt: row.started_at,
+        endedAt: row.ended_at,
+        durationSeconds,
+        country: context.country,
+        region: context.region,
+        city: context.city,
+        device: context.device
+      };
+    })
+  ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 25);
+
   return {
     source: "supabase" as const,
-    documents: documents ?? [],
-    spaces: spaces ?? [],
-    totals: { totalViews: 0, uniqueViewers: 0, downloads: 0, submissions: 0, recentVisits: [] },
-    perDocument: [],
-    perSpace: []
+    documents: safeDocuments,
+    spaces: safeSpaces,
+    totals: {
+      totalViews,
+      uniqueViewers: uniqueViewerFingerprints.size,
+      downloads: downloadRows.length,
+      submissions: submissionRows.length,
+      recentVisits
+    },
+    perDocument: safeDocuments.map((item) => ({
+      id: item.id,
+      title: item.title,
+      views: viewsByDocument.get(item.id) ?? 0,
+      downloads: downloadsByDocument.get(item.id) ?? 0
+    })),
+    perSpace: safeSpaces.map((item) => ({
+      id: item.id,
+      name: item.name,
+      views: viewsBySpace.get(item.id) ?? 0,
+      submissions: submissionsBySpace.get(item.id) ?? 0
+    }))
   };
 }
 
@@ -145,19 +291,28 @@ export async function getSettingsData(organizationId: string) {
       branding: mockBrandingSettings
     };
   }
-  const supabase = await createClientOrNull();
-  if (!supabase) return { source: "demo" as const, organizationName: "Demo Organization", members: [], branding: null };
-  const [{ data: orgData }, { data: membersData }] = await Promise.all([
-    supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
-    supabase.from("memberships").select("role, user_id").eq("organization_id", organizationId).order("created_at", { ascending: true })
+
+  const supabaseAdmin = createAdminClientOrNull();
+  if (!supabaseAdmin) return { source: "demo" as const, organizationName: "Demo Organization", members: [], branding: null };
+
+  const [{ data: orgData }, { data: membersData }, { data: profilesData }, usersResponse] = await Promise.all([
+    supabaseAdmin.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
+    supabaseAdmin.from("memberships").select("role, user_id").eq("organization_id", organizationId).order("created_at", { ascending: true }),
+    supabaseAdmin.from("profiles").select("id, full_name"),
+    supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
   ]);
+
   const org = orgData as Pick<Database["public"]["Tables"]["organizations"]["Row"], "name"> | null;
   const members = (membersData ?? []) as Array<Pick<Database["public"]["Tables"]["memberships"]["Row"], "user_id" | "role">>;
+  const profiles = (profilesData ?? []) as Array<Pick<Database["public"]["Tables"]["profiles"]["Row"], "id" | "full_name">>;
+  const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+  const users = usersResponse.data?.users ?? [];
+  const emailById = new Map(users.map((user) => [user.id, user.email ?? null]));
 
   return {
     source: "supabase" as const,
     organizationName: org?.name ?? "Not found",
-    members: members.map((m) => ({ userId: m.user_id, role: m.role })),
+    members: members.map((m) => ({ userId: m.user_id, role: m.role, fullName: profileById.get(m.user_id)?.full_name ?? null, email: emailById.get(m.user_id) ?? null })),
     branding: null
   };
 }

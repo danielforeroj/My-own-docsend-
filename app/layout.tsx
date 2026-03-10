@@ -1,6 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export const metadata: Metadata = {
   title: "Internal DocSend MVP",
@@ -26,9 +25,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <div className="fixed right-4 top-4 z-50">
-          <ThemeToggle />
-        </div>
         {children}
       </body>
     </html>

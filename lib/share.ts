@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeSlug } from "@/lib/slug";
 import { FieldType, type Database } from "@/lib/db/types";
 
 export type ShareField = {
@@ -21,7 +22,7 @@ export type ShareField = {
 type ShareLinkRow = Database["public"]["Tables"]["share_links"]["Row"];
 type AccessGrantRow = Database["public"]["Tables"]["share_link_access_grants"]["Row"];
 
-const SHARE_TOKEN_REGEX = /^[a-f0-9]{32}$/i;
+const SHARE_TOKEN_REGEX = /^[a-z0-9][a-z0-9-]{2,63}$/i;
 
 export function isValidShareToken(token: string) {
   return SHARE_TOKEN_REGEX.test(token);
@@ -32,7 +33,8 @@ export function isExpired(expiresAt: string | null) {
 }
 
 export async function getShareLinkByToken(token: string) {
-  if (!isValidShareToken(token)) {
+  const normalizedToken = normalizeSlug(token);
+  if (!isValidShareToken(normalizedToken)) {
     return null;
   }
 
@@ -40,7 +42,7 @@ export async function getShareLinkByToken(token: string) {
   const { data: linkData } = await supabase
     .from("share_links")
     .select("id, link_type, token, requires_intake, space_id, document_id, organization_id, expires_at, name, intake_settings")
-    .eq("token", token)
+    .eq("token", normalizedToken)
     .maybeSingle();
 
   const link = linkData as ShareLinkRow | null;

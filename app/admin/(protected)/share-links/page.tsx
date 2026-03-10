@@ -3,6 +3,7 @@ import { deleteShareLink } from "@/app/admin/actions";
 import { CopyLinkButton } from "@/components/admin/copy-link-button";
 import { DeleteActionButton } from "@/components/admin/delete-action-button";
 import { requireAdminContext } from "@/lib/auth/server";
+import { ExternalLinkIcon, PencilIcon } from "@/components/ui/icons";
 import { getShareLinksData } from "@/lib/data/repository";
 
 export default async function ShareLinksPage() {
@@ -38,9 +39,9 @@ export default async function ShareLinksPage() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">/s/{link.token}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">
-                      <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/${link.id}`}>Edit settings</Link>
-                      <Link className="btn-inline btn-inline-compact" href={`/s/${link.token}`} target="_blank">Open link</Link>
-                      <CopyLinkButton className="btn-inline btn-inline-compact" path={`/s/${link.token}`} label="Copy link" />
+                      <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/${link.id}`} title="Edit link settings" aria-label="Edit link settings"><PencilIcon className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only">Edit settings</span></Link>
+                      <Link className="btn-inline btn-inline-compact" href={`/s/${link.token}`} target="_blank" title="Open public link" aria-label="Open public link"><ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only">Open link</span></Link>
+                      <CopyLinkButton className="btn-inline btn-inline-compact" path={`/s/${link.token}`} label="Copy share link" iconOnly />
                       <form action={deleteShareLink.bind(null, link.id)} className="inline-flex">
                         <DeleteActionButton confirmMessage="Delete this share link? Existing visitors may lose access." />
                       </form>

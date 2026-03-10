@@ -61,7 +61,12 @@ export default async function NewShareLinkPage({
               <label className="text-sm font-medium">Internal name</label>
               <input className="w-full" name="name" placeholder="Q1 investor room" />
             </div>
-            <label className="flex items-center gap-2 self-end text-sm">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Share URL path</label>
+              <input className="w-full" name="share_path" placeholder="q1-investor-room" pattern="[a-z0-9-]+" title="Use lowercase letters, numbers, and hyphens" />
+              <p className="text-xs text-muted-foreground">Optional. Leave blank to auto-generate a secure path.</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm md:col-span-2">
               <input type="checkbox" name="requires_intake" defaultChecked /> Require intake before access
             </label>
           </div>
