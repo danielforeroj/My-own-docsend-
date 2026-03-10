@@ -128,8 +128,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
 
     if (demo.link.linkType === "document" && demo.document) {
       const demoLanding = (demo.document.landingPage ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number };
-      const demoMode = demoLanding.viewer_mode === "deck" ? "deck" : "document";
-      const demoPages = typeof demoLanding.viewer_page_count === "number" && demoLanding.viewer_page_count > 0 ? demoLanding.viewer_page_count : 12;
+      const demoModeRaw = demoLanding.viewer_mode ?? (demoLanding as { viewerMode?: "deck" | "document" }).viewerMode;
+      const demoPagesRaw = demoLanding.viewer_page_count ?? (demoLanding as { viewerPageCount?: number }).viewerPageCount;
+      const demoMode = demoModeRaw === "deck" ? "deck" : "document";
+      const demoPages = typeof demoPagesRaw === "number" && demoPagesRaw > 0 ? demoPagesRaw : 12;
 
       return (
         <PublicShell landing={demoLanding} title={demo.document.title}>
@@ -223,8 +225,10 @@ export default async function PublicSharePage({ params, searchParams }: { params
     if (!document) notFound();
 
     const landing = ((document.landing_page ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number }) || {};
-    const viewerMode = landing.viewer_mode === "deck" ? "deck" : "document";
-    const viewerPageCount = typeof landing.viewer_page_count === "number" && landing.viewer_page_count > 0 ? landing.viewer_page_count : 12;
+    const viewerModeRaw = landing.viewer_mode ?? (landing as { viewerMode?: "deck" | "document" }).viewerMode;
+    const viewerPagesRaw = landing.viewer_page_count ?? (landing as { viewerPageCount?: number }).viewerPageCount;
+    const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+    const viewerPageCount = typeof viewerPagesRaw === "number" && viewerPagesRaw > 0 ? viewerPagesRaw : 12;
 
     const { data: signedUrl } = await supabase.storage.from("documents").createSignedUrl(document.storage_path, 60 * 60);
 

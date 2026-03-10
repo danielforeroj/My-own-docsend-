@@ -20,8 +20,10 @@ export default async function PublicDocumentPage({ params }: { params: { slug: s
   const normalizedStoragePath = raw.storage_path ?? raw.storagePath;
   const landing = ((raw.landing_page ?? raw.landingPage) ?? {}) as LandingConfig & { viewer_mode?: "deck" | "document"; viewer_page_count?: number };
 
-  const viewerMode = landing.viewer_mode === "deck" ? "deck" : "document";
-  const viewerPageCount = typeof landing.viewer_page_count === "number" && landing.viewer_page_count > 0 ? landing.viewer_page_count : 12;
+  const viewerModeRaw = landing.viewer_mode ?? (landing as { viewerMode?: "deck" | "document" }).viewerMode;
+  const viewerPagesRaw = landing.viewer_page_count ?? (landing as { viewerPageCount?: number }).viewerPageCount;
+  const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+  const viewerPageCount = typeof viewerPagesRaw === "number" && viewerPagesRaw > 0 ? viewerPagesRaw : 12;
 
   const { data: signedUrl } = !shouldUseDemoData() && normalizedStoragePath
     ? await createAdminClient().storage.from("documents").createSignedUrl(normalizedStoragePath, 60 * 60)

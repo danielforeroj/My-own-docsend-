@@ -222,6 +222,36 @@ function parseViewerForm(formData: FormData) {
   };
 }
 
+
+function parseShareLinkPathSegment(value: FormDataEntryValue | null) {
+  const normalized = slugify(String(value || "").trim());
+  if (!normalized) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      share_path: ["Share URL path is required."]
+    });
+  }
+
+  if (normalized.length < 3 || normalized.length > 64) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      share_path: ["Use 3-64 characters with lowercase letters, numbers, and hyphens."]
+    });
+  }
+
+  return normalized;
+}
+
+async function ensureUniqueShareLinkPath({ supabase, organizationId, pathSegment, excludeId }: { supabase: any; organizationId: string; pathSegment: string; excludeId?: string }) {
+  let query = supabase.from("share_links").select("id").eq("organization_id", organizationId).eq("token", pathSegment).limit(1);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  if (data?.length) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      share_path: ["That share URL path is already in use."]
+    });
+  }
+}
+
 function parseLandingForm(formData: FormData) {
   return {
     page_title: String(formData.get("landing_page_title") || "").trim() || null,
@@ -397,7 +427,6 @@ export async function createShareLink(formData: FormData) {
   const targetId = String(formData.get("target_id") || "");
   const name = String(formData.get("name") || "").trim();
   const requiresIntake = formData.get("requires_intake") === "on";
-
   if (!["space", "document"].includes(targetType) || !targetId) throw new Error("Invalid share target.");
 
   const targetLookup =
@@ -406,7 +435,9 @@ export async function createShareLink(formData: FormData) {
       : await supabase.from("documents").select("id").eq("id", targetId).eq("organization_id", ctx.organizationId).maybeSingle();
   if (!targetLookup.data) throw new Error("Target not found.");
 
-  const token = randomUUID().replace(/-/g, "");
+  const customPathRaw = formData.get("share_path");
+  const token = customPathRaw ? parseShareLinkPathSegment(customPathRaw) : randomUUID().replace(/-/g, "");
+  await ensureUniqueShareLinkPath({ supabase, organizationId: ctx.organizationId, pathSegment: token });
 
   const intakeSettings = {
     headline: String(formData.get("intake_headline") || "").trim() || null,
@@ -453,7 +484,7 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
 
   const { data: ownedLink, error: ownedLinkError } = await supabase
     .from("share_links")
-    .select("id")
+    .select("id, token")
     .eq("id", shareLinkId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
@@ -462,6 +493,9 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
 
   const name = String(formData.get("name") || "").trim();
   const requiresIntake = formData.get("requires_intake") === "on";
+  const sharePathRaw = formData.get("share_path");
+  const sharePath = sharePathRaw ? parseShareLinkPathSegment(sharePathRaw) : (ownedLink as { token: string }).token;
+  await ensureUniqueShareLinkPath({ supabase, organizationId: ctx.organizationId, pathSegment: sharePath, excludeId: shareLinkId });
   const intakeSettings = {
     headline: String(formData.get("intake_headline") || "").trim() || null,
     description: String(formData.get("intake_description") || "").trim() || null,
@@ -471,7 +505,7 @@ export async function updateShareLinkFields(shareLinkId: string, formData: FormD
 
   const { error: linkError } = await supabase
     .from("share_links")
-    .update({ name: name || null, requires_intake: requiresIntake, intake_settings: intakeSettings })
+    .update({ token: sharePath, name: name || null, requires_intake: requiresIntake, intake_settings: intakeSettings })
     .eq("id", shareLinkId);
   if (linkError) throw new Error(linkError.message);
 
@@ -598,7 +632,7 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
   }
 
   const ctx = await requireAdminContext();
-  const supabase = (await createClientOrNull()) as any;
+  const supabase = getAdminMutationClientOrThrow() ?? ((await createClientOrNull()) as any);
   if (!supabase) return;
 
   const payload = parseVisibilityForm(formData);
@@ -806,7 +840,7 @@ export async function deleteShareLink(shareLinkId: string) {
 
   const { data: link } = await supabase
     .from("share_links")
-    .select("id")
+    .select("id, token")
     .eq("id", shareLinkId)
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();

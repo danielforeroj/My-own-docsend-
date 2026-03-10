@@ -12,8 +12,8 @@ function buildPdfUrl(baseUrl: string, mode: ViewerMode, page: number) {
   params.set("navpanes", "0");
   if (mode === "deck") {
     params.set("scrollbar", "0");
-    params.set("view", "FitH");
     params.set("page", String(page));
+    params.set("zoom", "page-fit");
   }
   return `${baseUrl}#${params.toString()}`;
 }
@@ -196,7 +196,7 @@ export function DocumentViewer({
 
           <div className="overflow-hidden rounded-xl border border-border bg-background p-2 md:p-3">
             {iframeSrc ? (
-              <iframe title={`${title} slide ${currentPage}`} src={iframeSrc} className="h-[74vh] w-full rounded-lg" />
+              <iframe key={`deck-${currentPage}`} title={`${title} slide ${currentPage}`} src={iframeSrc} className="h-[74vh] w-full rounded-lg" />
             ) : (
               <p className="p-4 text-sm text-muted-foreground">Unable to load document preview.</p>
             )}
@@ -208,7 +208,7 @@ export function DocumentViewer({
             Reading mode: all pages are in one continuous stream for easier scanning and search.
           </div>
           <div className="overflow-hidden rounded-xl border border-border bg-background p-2 md:p-3">
-            {iframeSrc ? <iframe title={title} src={iframeSrc} className="h-[82vh] w-full rounded-lg" /> : <p className="p-4 text-sm text-muted-foreground">Unable to load document preview.</p>}
+            {iframeSrc ? <iframe key="document-scroll" title={title} src={iframeSrc} className="h-[82vh] w-full rounded-lg" /> : <p className="p-4 text-sm text-muted-foreground">Unable to load document preview.</p>}
           </div>
         </div>
       )}

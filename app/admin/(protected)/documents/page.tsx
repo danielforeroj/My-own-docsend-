@@ -55,8 +55,10 @@ export default async function DocumentsPage() {
             </thead>
             <tbody>
               {documents.map((document: { id: string; title: string; file_size?: number | null; created_at: string; visibility?: string; public_slug?: string | null; landing_page?: { viewer_mode?: string; viewer_page_count?: number } | null }) => {
-                const viewerMode = document.landing_page?.viewer_mode === "deck" ? "deck" : "document";
-                const viewerPages = typeof document.landing_page?.viewer_page_count === "number" ? document.landing_page.viewer_page_count : 12;
+                const viewerModeRaw = document.landing_page?.viewer_mode ?? (document.landing_page as { viewerMode?: string } | null)?.viewerMode;
+                const viewerPagesRaw = document.landing_page?.viewer_page_count ?? (document.landing_page as { viewerPageCount?: number } | null)?.viewerPageCount;
+                const viewerMode = viewerModeRaw === "deck" ? "deck" : "document";
+                const viewerPages = typeof viewerPagesRaw === "number" ? viewerPagesRaw : 12;
                 const deleteAction = deleteDocument.bind(null, document.id);
 
                 return (

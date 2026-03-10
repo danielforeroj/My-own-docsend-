@@ -90,7 +90,12 @@ export default async function ShareLinkSettingsPage({ params }: { params: { id: 
               <label className="text-sm font-medium">Internal name</label>
               <input className="w-full" name="name" defaultValue={link.name ?? ""} />
             </div>
-            <label className="flex items-center gap-2 self-end text-sm">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Share URL path</label>
+              <input className="w-full" name="share_path" defaultValue={link.token} pattern="[a-z0-9-]+" title="Use lowercase letters, numbers, and hyphens" required />
+              <p className="text-xs text-muted-foreground">Customizes the public URL segment under <code>/s/...</code>.</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm md:col-span-2">
               <input type="checkbox" name="requires_intake" defaultChecked={link.requires_intake} /> Require intake before access
             </label>
           </div>
