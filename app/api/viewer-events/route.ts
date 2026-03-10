@@ -1,29 +1,119 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { createHash } from "crypto";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
+
+type ViewerEventPayload = {
+  documentId?: string;
+  spaceId?: string;
+  shareToken?: string | null;
+  page?: number;
+  mode?: string;
+  event?: "view_start" | "view_end" | "slide_change" | string;
+};
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function parseUserAgentFamily(userAgent: string) {
+  if (/mobile/i.test(userAgent)) return "mobile";
+  if (/tablet|ipad/i.test(userAgent)) return "tablet";
+  return "desktop";
+}
 
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as {
-      documentId?: string;
-      shareToken?: string | null;
-      page?: number;
-      mode?: string;
-      event?: string;
-    };
+    const payload = (await request.json()) as ViewerEventPayload;
 
-    if (!payload.documentId || !payload.page) {
+    if (!payload.documentId && !payload.spaceId && !payload.shareToken) {
       return NextResponse.json({ ok: false, error: "Missing required event fields." }, { status: 400 });
     }
 
-    // Lightweight analytics tie-in for MVP: log structured slide navigation events.
-    // This is intentionally non-blocking and infra-free.
-    console.info("viewer_event", {
-      event: payload.event ?? "slide_change",
-      mode: payload.mode ?? "deck",
-      documentId: payload.documentId,
-      shareToken: payload.shareToken ?? null,
-      page: payload.page,
-      at: new Date().toISOString()
-    });
+    const supabase = createAdminClientOrNull() as any;
+    if (!supabase) {
+      return NextResponse.json({ ok: true, skipped: true });
+    }
+
+    let documentId: string | null = null;
+    let spaceId: string | null = null;
+
+    if (payload.shareToken) {
+      const { data: link } = await supabase
+        .from("share_links")
+        .select("document_id, space_id")
+        .eq("token", payload.shareToken)
+        .maybeSingle();
+      documentId = link?.document_id ?? null;
+      spaceId = link?.space_id ?? null;
+    }
+
+    if (!documentId && payload.documentId) {
+      if (isUuid(payload.documentId)) {
+        documentId = payload.documentId;
+      } else {
+        const { data: doc } = await supabase.from("documents").select("id").eq("public_slug", payload.documentId).eq("visibility", "public").maybeSingle();
+        documentId = doc?.id ?? null;
+      }
+    }
+
+    if (!spaceId && payload.spaceId) {
+      if (isUuid(payload.spaceId)) {
+        spaceId = payload.spaceId;
+      } else {
+        const { data: space } = await supabase.from("spaces").select("id").eq("public_slug", payload.spaceId).eq("visibility", "public").maybeSingle();
+        spaceId = space?.id ?? null;
+      }
+    }
+
+    if (!documentId && !spaceId) {
+      return NextResponse.json({ ok: false, error: "Could not resolve event target." }, { status: 400 });
+    }
+
+    const headerStore = await headers();
+    const forwardedFor = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const userAgent = headerStore.get("user-agent") || "unknown";
+
+    const country = headerStore.get("x-vercel-ip-country") || headerStore.get("cf-ipcountry") || "unknown";
+    const region = headerStore.get("x-vercel-ip-country-region") || headerStore.get("x-vercel-region") || "unknown";
+    const city = headerStore.get("x-vercel-ip-city") || "unknown";
+    const device = parseUserAgentFamily(userAgent);
+
+    const fingerprintHash = createHash("sha256")
+      .update(`${documentId ?? "none"}:${spaceId ?? "none"}:${forwardedFor}:${userAgent}`)
+      .digest("hex");
+    const fingerprint = `${fingerprintHash}|${country}|${region}|${city}|${device}`;
+
+    const nowIso = new Date().toISOString();
+    const recentThreshold = new Date(Date.now() - 1000 * 60 * 30).toISOString();
+
+    const duplicateQuery = supabase
+      .from("view_sessions")
+      .select("id")
+      .like("viewer_fingerprint", `${fingerprintHash}|%`)
+      .gte("created_at", recentThreshold)
+      .limit(1);
+
+    const scopedDuplicate = documentId ? duplicateQuery.eq("document_id", documentId) : duplicateQuery.eq("space_id", spaceId!);
+    const { data: existing } = await scopedDuplicate;
+
+    const eventType = payload.event === "view_end" ? "view_end" : payload.event === "view_start" ? "view_start" : "slide_change";
+
+    if (eventType === "view_end" && existing?.length) {
+      await supabase.from("view_sessions").update({ ended_at: nowIso }).eq("id", existing[0].id);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!existing?.length) {
+      await supabase.from("view_sessions").insert({
+        document_id: documentId,
+        space_id: spaceId,
+        viewer_fingerprint: fingerprint,
+        started_at: nowIso,
+        ended_at: eventType === "view_end" ? nowIso : null
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch {

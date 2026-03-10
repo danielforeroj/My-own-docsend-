@@ -50,61 +50,6 @@ export async function POST(request: Request) {
     if (!storagePath?.startsWith(`${ctx.organizationId}/`)) {
       return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
     }
-    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
-
-    if (!normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
-    }
-
-    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
-    const safeViewerPageCount = Number.isFinite(viewerPageCount)
-      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
-      : 12;
-
-    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
-
-    if (!normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
-    }
-
-    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
-    const safeViewerPageCount = Number.isFinite(viewerPageCount)
-      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
-      : 12;
-
-    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
-
-    if (!normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
-    }
-
-    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
-    const safeViewerPageCount = Number.isFinite(viewerPageCount)
-      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
-      : 12;
-
-    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
-
-    if (!normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
-    }
-
-    const { normalizedSlug, safeViewerMode, safeViewerPageCount } = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
-
-    if (!normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
-    }
-
-    const { normalizedSlug, safeViewerMode, safeViewerPageCount } = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
-
-    if (!normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
-    }
-
-    const slashIndex = storagePath.indexOf("/");
-    if (slashIndex <= 0 || slashIndex >= storagePath.length - 1) {
-      return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
-    }
 
     const uploadOptions = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
     if (!uploadOptions.normalizedSlug) {
@@ -114,11 +59,6 @@ export async function POST(request: Request) {
     const slashIndex = storagePath.indexOf("/");
     if (slashIndex <= 0 || slashIndex >= storagePath.length - 1) {
       return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
-    }
-
-    const uploadOptions = parseUploadOptions(publicSlug, viewerMode, viewerPageCount);
-    if (!uploadOptions.normalizedSlug) {
-      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
     }
 
     const [folder, fileName] = storagePath.split(/\/(.+)/);

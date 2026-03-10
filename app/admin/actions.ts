@@ -261,8 +261,9 @@ export async function createSpace(formData: FormData) {
     });
   }
 
-  const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
   await ensureUniquePublicSlug({ supabase, table: "spaces", organizationId: ctx.organizationId, slug: publicSlug });
+
+  const internalSlug = `${slugify(name)}-${Math.random().toString(36).slice(2, 8)}`;
 
   const { data: space, error: spaceError } = await supabase
     .from("spaces")
@@ -270,7 +271,7 @@ export async function createSpace(formData: FormData) {
       organization_id: ctx.organizationId,
       created_by: ctx.userId,
       name,
-      slug,
+      slug: internalSlug,
       description: description || null,
       public_slug: publicSlug
     })
@@ -498,7 +499,9 @@ export async function updateDocumentLanding(documentId: string, formData: FormDa
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/documents/${documentId}`);
+  revalidatePath("/admin/documents");
 }
+
 
 export async function updateSpaceLanding(spaceId: string, formData: FormData) {
   if (shouldDisableMutations()) {
@@ -520,7 +523,9 @@ export async function updateSpaceLanding(spaceId: string, formData: FormData) {
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+  revalidatePath("/admin/spaces");
 }
+
 
 
 export async function updateDocumentVisibility(documentId: string, formData: FormData) {
@@ -554,7 +559,9 @@ export async function updateDocumentVisibility(documentId: string, formData: For
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/documents/${documentId}`);
+  revalidatePath("/admin/documents");
 }
+
 
 export async function updateSpaceVisibility(spaceId: string, formData: FormData) {
   if (shouldDisableMutations()) {
@@ -577,7 +584,9 @@ export async function updateSpaceVisibility(spaceId: string, formData: FormData)
 
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/spaces/${spaceId}`);
+  revalidatePath("/admin/spaces");
 }
+
 
 
 
@@ -597,12 +606,19 @@ export async function createEmployeeUser(formData: FormData) {
 
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "").trim();
+  const fullName = String(formData.get("full_name") || "").trim();
   const roleRaw = String(formData.get("role") || "admin").trim();
   const role = roleRaw === "super_admin" ? "super_admin" : "admin";
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     throw new AdminFormError("Please fix the highlighted fields.", {
       email: ["A valid email is required."]
+    });
+  }
+
+  if (!fullName) {
+    throw new AdminFormError("Please fix the highlighted fields.", {
+      full_name: ["Full name is required."]
     });
   }
 
@@ -621,14 +637,39 @@ export async function createEmployeeUser(formData: FormData) {
     throw new Error(userError?.message ?? "Failed to create user.");
   }
 
-  const { error: membershipError } = await supabase.from("memberships").insert({
-    organization_id: ctx.organizationId,
-    user_id: createdUser.user.id,
-    role
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: createdUser.user.id,
+    full_name: fullName,
+    updated_at: new Date().toISOString()
   });
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
 
-  if (membershipError) {
-    throw new Error(membershipError.message);
+  const { data: existingMembership, error: membershipLookupError } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("organization_id", ctx.organizationId)
+    .eq("user_id", createdUser.user.id)
+    .maybeSingle();
+
+  if (membershipLookupError) {
+    throw new Error(membershipLookupError.message);
+  }
+
+  const membershipMutation = existingMembership
+    ? await supabase
+        .from("memberships")
+        .update({ role })
+        .eq("id", existingMembership.id)
+    : await supabase.from("memberships").insert({
+        organization_id: ctx.organizationId,
+        user_id: createdUser.user.id,
+        role
+      });
+
+  if (membershipMutation.error) {
+    throw new Error(membershipMutation.error.message);
   }
 
   revalidatePath("/admin/settings");

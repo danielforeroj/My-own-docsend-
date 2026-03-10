@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { createClientOrNull, isBrowserDemoMode, isBrowserSupabaseConfigured } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -44,6 +45,10 @@ export default function AdminLoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4">
+      <div className="w-full space-y-3">
+        <div className="flex justify-end">
+          <ThemeToggle compact />
+        </div>
       <form className="card w-full space-y-5 p-6" onSubmit={onSubmit}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Multiplied Docs</p>
@@ -89,6 +94,7 @@ export default function AdminLoginPage() {
           ) : null}
         </div>
       </form>
+      </div>
     </main>
   );
 }
