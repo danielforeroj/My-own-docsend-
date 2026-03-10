@@ -564,3 +564,91 @@ export async function updateDocumentLandingActionState(documentId: string, _prev
 export async function updateSpaceLandingActionState(spaceId: string, _prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
   return withActionState(() => updateSpaceLanding(spaceId, formData), "Landing config updated.");
 }
+
+export async function deleteDocument(documentId: string) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/documents");
+    return;
+  }
+
+  const ctx = await requireAdminContext();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
+
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("id, storage_path")
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  if (!doc) throw new Error("Document not found.");
+
+  const { data: shareLinks } = await supabase
+    .from("share_links")
+    .select("id")
+    .eq("organization_id", ctx.organizationId)
+    .eq("document_id", documentId);
+  const shareLinkIds = (shareLinks ?? []).map((item: { id: string }) => item.id);
+
+  if (shareLinkIds.length) {
+    await supabase.from("share_link_fields").delete().in("share_link_id", shareLinkIds);
+    await supabase.from("share_link_access_grants").delete().in("share_link_id", shareLinkIds);
+    await supabase.from("visitor_submissions").delete().in("share_link_id", shareLinkIds);
+    await supabase.from("share_links").delete().in("id", shareLinkIds);
+  }
+
+  await supabase.from("space_documents").delete().eq("document_id", documentId);
+  await supabase.from("downloads").delete().eq("document_id", documentId);
+  await supabase.from("view_sessions").delete().eq("document_id", documentId);
+  await supabase.from("visitor_submissions").delete().eq("document_id", documentId);
+
+  const { error: deleteDocError } = await supabase
+    .from("documents")
+    .delete()
+    .eq("id", documentId)
+    .eq("organization_id", ctx.organizationId);
+  if (deleteDocError) throw new Error(deleteDocError.message);
+
+  await supabase.storage.from("documents").remove([doc.storage_path]);
+
+  revalidatePath("/admin/documents");
+  revalidatePath("/admin/share-links");
+}
+
+export async function deleteDocumentActionState(documentId: string, prev: AdminActionState): Promise<AdminActionState> {
+  void prev;
+  return withActionState(() => deleteDocument(documentId), "Document deleted.");
+}
+
+export async function deleteShareLink(shareLinkId: string) {
+  if (shouldDisableMutations()) {
+    revalidatePath("/admin/share-links");
+    return;
+  }
+
+  const ctx = await requireAdminContext();
+  const supabase = (await createClientOrNull()) as any;
+  if (!supabase) return;
+
+  const { data: link } = await supabase
+    .from("share_links")
+    .select("id")
+    .eq("id", shareLinkId)
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  if (!link) throw new Error("Share link not found.");
+
+  await supabase.from("share_link_fields").delete().eq("share_link_id", shareLinkId);
+  await supabase.from("share_link_access_grants").delete().eq("share_link_id", shareLinkId);
+  await supabase.from("visitor_submissions").delete().eq("share_link_id", shareLinkId);
+
+  const { error } = await supabase.from("share_links").delete().eq("id", shareLinkId).eq("organization_id", ctx.organizationId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/share-links");
+}
+
+export async function deleteShareLinkActionState(shareLinkId: string, prev: AdminActionState): Promise<AdminActionState> {
+  void prev;
+  return withActionState(() => deleteShareLink(shareLinkId), "Share link deleted.");
+}

@@ -12,9 +12,11 @@ export async function POST(request: Request) {
     if (!ctx) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { title, publicSlug, storagePath, fallbackFileSize, fallbackMimeType } = (await request.json()) as {
+    const { title, publicSlug, viewerMode, viewerPageCount, storagePath, fallbackFileSize, fallbackMimeType } = (await request.json()) as {
       title?: string;
       publicSlug?: string;
+      viewerMode?: "deck" | "document";
+      viewerPageCount?: number;
       storagePath?: string;
       fallbackFileSize?: number;
       fallbackMimeType?: string;
@@ -27,6 +29,17 @@ export async function POST(request: Request) {
     if (!storagePath?.startsWith(`${ctx.organizationId}/`)) {
       return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
     }
+    const normalizedSlug = normalizeSlug(String(publicSlug || ""));
+
+    if (!normalizedSlug) {
+      return NextResponse.json({ error: "Document URL slug is required." }, { status: 400 });
+    }
+
+    const safeViewerMode = viewerMode === "deck" ? "deck" : "document";
+    const safeViewerPageCount = Number.isFinite(viewerPageCount)
+      ? Math.max(1, Math.min(300, Math.round(Number(viewerPageCount))))
+      : 12;
+
     const normalizedSlug = normalizeSlug(String(publicSlug || ""));
 
     if (!normalizedSlug) {
@@ -69,6 +82,7 @@ export async function POST(request: Request) {
       uploaded_by: ctx.userId,
       title: title.trim(),
       public_slug: normalizedSlug,
+      landing_page: { viewer_mode: safeViewerMode, viewer_page_count: safeViewerPageCount },
       storage_path: storagePath,
       file_size: fileSize,
       mime_type: mimeType

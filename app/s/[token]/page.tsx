@@ -28,6 +28,27 @@ async function getFields(shareLinkId: string): Promise<ShareField[]> {
   })) as ShareField[];
 }
 
+function withRequiredIntakeFallback(fields: ShareField[]): ShareField[] {
+  if (fields.length > 0) return fields;
+
+  return [
+    {
+      id: "fallback-email",
+      field_name: "email",
+      label: "Work email",
+      field_type: "email",
+      is_required: true,
+      options: null,
+      placeholder: "name@company.com",
+      help_text: "Required to access protected content.",
+      default_value: null,
+      width: "full",
+      validation_rule: "preset:email",
+      position: 0
+    }
+  ] as ShareField[];
+}
+
 function FieldRenderer({ field }: { field: ShareField & { help_text?: string | null; default_value?: string | null; width?: "full" | "half" } }) {
   const commonProps = {
     name: field.field_name,
@@ -140,7 +161,8 @@ export default async function PublicSharePage({ params, searchParams }: { params
   const link = linkData as ShareLinkRow | null;
   if (!link) notFound();
 
-  const [accessGrant, fields] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
+  const [accessGrant, fieldsData] = await Promise.all([getValidAccessGrant(link.id), getFields(link.id)]);
+  const fields = link.requires_intake ? withRequiredIntakeFallback(fieldsData) : fieldsData;
   const intakeSettings = (link.intake_settings ?? {}) as Record<string, string | null>;
 
   const supabase = createAdminClient() as any;
@@ -171,7 +193,7 @@ export default async function PublicSharePage({ params, searchParams }: { params
               ))}
             </div>
 
-            {!fields.length ? <p className="text-sm text-muted-foreground">No intake questions are configured yet. You can continue to view the content.</p> : null}
+            {!fieldsData.length ? <p className="text-sm text-muted-foreground">This protected link had no custom intake fields, so we require your email to continue.</p> : null}
             {intakeSettings.consent_text ? <p className="text-xs text-muted-foreground">{intakeSettings.consent_text}</p> : null}
             <button type="submit" className="btn-primary w-full md:w-auto">
               Continue

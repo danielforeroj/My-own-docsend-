@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { deleteDocument } from "@/app/admin/actions";
+import { CopyLinkButton } from "@/components/admin/copy-link-button";
+import { DeleteActionButton } from "@/components/admin/delete-action-button";
 import { requireAdminContext } from "@/lib/auth/server";
 import { getDocumentsData } from "@/lib/data/repository";
 
@@ -50,9 +53,10 @@ export default async function DocumentsPage() {
               </tr>
             </thead>
             <tbody>
-              {documents.map((document: { id: string; title: string; file_size?: number | null; created_at: string; visibility?: string; landing_page?: { viewer_mode?: string; viewer_page_count?: number } | null }) => {
+              {documents.map((document: { id: string; title: string; file_size?: number | null; created_at: string; visibility?: string; public_slug?: string | null; landing_page?: { viewer_mode?: string; viewer_page_count?: number } | null }) => {
                 const viewerMode = document.landing_page?.viewer_mode === "deck" ? "deck" : "document";
                 const viewerPages = typeof document.landing_page?.viewer_page_count === "number" ? document.landing_page.viewer_page_count : 12;
+                const deleteAction = deleteDocument.bind(null, document.id);
 
                 return (
                   <tr key={document.id} className="border-b border-border last:border-b-0">
@@ -67,6 +71,10 @@ export default async function DocumentsPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-start gap-1.5 md:justify-end md:gap-2">
                         <Link className="btn-inline btn-inline-compact" href={`/admin/share-links/new?targetType=document&targetId=${document.id}`}>Create share link</Link>
+                        {document.public_slug ? <CopyLinkButton className="btn-inline btn-inline-compact" path={`/d/${document.public_slug}`} label="Copy doc URL" /> : null}
+                        <form action={deleteAction} className="inline-flex">
+                          <DeleteActionButton confirmMessage="Delete this document? This also removes related share links and space assignments." />
+                        </form>
                       </div>
                     </td>
                   </tr>

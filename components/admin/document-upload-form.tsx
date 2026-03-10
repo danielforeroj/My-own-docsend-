@@ -19,6 +19,8 @@ export function DocumentUploadForm() {
   const [host, setHost] = useState("your-domain.com");
   const [slugError, setSlugError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [viewerMode, setViewerMode] = useState<"deck" | "document">("document");
+  const [viewerPageCount, setViewerPageCount] = useState(12);
   const [state, setState] = useState<UploadState>({ error: null, success: null, loading: false });
 
 
@@ -93,6 +95,8 @@ export function DocumentUploadForm() {
         body: JSON.stringify({
           title: title.trim(),
           publicSlug: publicSlug.trim(),
+          viewerMode,
+          viewerPageCount,
           storagePath: uploadData.path,
           fallbackFileSize: file.size,
           fallbackMimeType: file.type
@@ -156,6 +160,27 @@ export function DocumentUploadForm() {
         <p className="text-xs text-muted-foreground">Preview: https://{host}/d/{publicSlug || "my-custom-doc"}</p>
         {slugError ? <p className="text-xs text-red-600 dark:text-red-300">{slugError}</p> : null}
       </div>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">Viewer mode</label>
+        <select className="w-full" value={viewerMode} onChange={(event) => setViewerMode(event.target.value as "deck" | "document") }>
+          <option value="document">Document (continuous scroll)</option>
+          <option value="deck">Deck (page-by-page)</option>
+        </select>
+      </div>
+      {viewerMode === "deck" ? (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Page count (for deck mode)</label>
+          <input
+            type="number"
+            min={1}
+            max={300}
+            value={viewerPageCount}
+            onChange={(event) => setViewerPageCount(Math.max(1, Math.min(300, Number(event.target.value) || 1)))}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">Used to power page-by-page navigation and progress indicators.</p>
+        </div>
+      ) : null}
       <div className="space-y-2">
         <label className="block text-sm font-medium">PDF file</label>
         <input
