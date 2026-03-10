@@ -27,7 +27,22 @@ export async function submitIntake(token: string, formData: FormData) {
 
   const payload: Record<string, string | boolean> = {};
 
-  for (const field of fields ?? []) {
+  const effectiveFields = (fields?.length
+    ? fields
+    : [
+        {
+          id: "fallback-email",
+          field_name: "email",
+          label: "Work email",
+          field_type: "email",
+          is_required: true,
+          options: null,
+          placeholder: "name@company.com",
+          position: 0
+        }
+      ]) as Array<any>;
+
+  for (const field of effectiveFields) {
     const result = validateIntakeValue(
       {
         ...field,

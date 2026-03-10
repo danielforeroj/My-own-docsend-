@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createShareLink } from "@/app/admin/actions";
 import { IntakeFieldsEditor } from "@/components/admin/intake-fields-editor";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { requireAdminContext } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -91,9 +92,7 @@ export default async function NewShareLinkPage({
         <IntakeFieldsEditor />
 
         <div className="flex justify-end">
-          <button className="btn-primary" type="submit">
-            Create share link
-          </button>
+          <SubmitButton className="btn-primary" idleLabel="Create share link" pendingLabel="Creating share link..." />
         </div>
       </form>
     </div>
