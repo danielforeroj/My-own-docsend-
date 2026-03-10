@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/types";
 import { FormFieldError, ServerActionForm } from "@/components/ui/server-action-form";
 import { SlugField } from "@/components/admin/slug-field";
+import { CopyLinkButton } from "@/components/admin/copy-link-button";
 
 type LandingConfig = {
   page_title?: string | null;
@@ -105,8 +106,13 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
       ) : null}
 
       <section className="card p-5">
-        <h2 className="mb-1 text-lg font-semibold">Public visibility & URL</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="mb-1 text-lg font-semibold">Public visibility & URL</h2>
+            <p className="text-sm text-muted-foreground">Public items can appear in the homepage catalog with personalized /d or /sp URLs. Private items stay hidden from catalog and can still be shared via private/share links.</p>
+          </div>
+          {document.public_slug ? <CopyLinkButton path={`/d/${document.public_slug}`} label="Copy public URL" /> : null}
+        </div>
         <ServerActionForm action={visibilityAction} className="grid gap-4 md:grid-cols-2" idleLabel="Update visibility" pendingLabel="Updating visibility...">
           {(state) => (
             <>
